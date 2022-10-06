@@ -1,10 +1,9 @@
-import { Button, Container, Grid, makeStyles, Typography, AppBar, Toolbar, IconButton } from '@material-ui/core'
-import MenuIcon from '@material-ui/icons/Menu'
+import { Button, Grid, makeStyles, Typography } from '@material-ui/core'
+// import { ipcRenderer } from 'electron/renderer'
 import React from 'react'
 import { Link } from 'react-router-dom'
-import UnidadMedida from '../Pages2/Registros/UnidadMedida'
-import { Main } from '../Organismsm/NewDrawer'
 
+const ipcRenderer = window.require('electron').ipcRenderer
 const useStyles = makeStyles((theme) => ({
     toolbar: theme.mixins.toolbar,
     content: {
@@ -50,6 +49,28 @@ const useStyles = makeStyles((theme) => ({
     },
 }))
 
+const cambiarFechas=async()=>{
+    await ipcRenderer.invoke(`cambiar-fechas`)
+    .then(resp=>{
+        alert(JSON.parse(resp))
+        console.log(JSON.parse(resp))
+    })
+    .catch(err=>console.log(err))
+}
+const registrarMovimientos=async()=>{
+    await ipcRenderer.invoke('register-movimiento')
+    .then(resp=>{
+        alert(JSON.parse(resp))
+    })
+    .catch(err=>console.log(err))
+}
+const postIdAlmacen=async()=>{
+    await ipcRenderer.invoke('id-almacen')
+    .then(resp=>{
+        alert(JSON.parse(resp))
+    })
+    .catch(err=>console.log(err))
+}
 const Home = () => {
     const classes = useStyles()
     return (
@@ -70,6 +91,10 @@ const Home = () => {
                     <Button component={Link} to='/salidaMateriales' style={{ marginBottom: '1rem' }} classes={{ root: classes.root2, label: classes.label }}>Salidas</Button>
                 </Grid>
             </div>
+
+            <button onClick={cambiarFechas}>cambiar fechas</button>
+            <button onClick={postIdAlmacen}>id-Almacen</button>
+            <button onClick={registrarMovimientos}>registrar movimientos</button>
         </>
     )
 }

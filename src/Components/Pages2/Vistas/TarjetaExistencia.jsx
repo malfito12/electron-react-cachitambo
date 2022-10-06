@@ -1,4 +1,4 @@
-import { Container, Box, makeStyles, Paper, Typography, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Grid, TextField, InputAdornment, Button, IconButton, Tooltip, AppBar, Toolbar } from '@material-ui/core'
+import { Container, Box, makeStyles, Paper, Typography, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Grid, TextField, InputAdornment, IconButton, Tooltip, CircularProgress } from '@material-ui/core'
 import React from 'react'
 import { useEffect } from 'react'
 import { useState } from 'react'
@@ -8,6 +8,7 @@ import 'jspdf-autotable'
 import sello from '../../../images/sello.png'
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import PrintIcon from '@material-ui/icons/Print';
+import { useHistory, useLocation } from 'react-router-dom';
 
 const ipcRenderer = window.require('electron').ipcRenderer
 const useStyles = makeStyles((theme) => ({
@@ -20,16 +21,24 @@ const useStyles = makeStyles((theme) => ({
         align: 'center',
         fontSize: 'small',
         padding: 0,
+    },
+    tableRow: {
+        "&:hover": {
+            backgroundColor: "#bbdefb"
+        }
     }
 }))
 const TarjetaExistencia = (props) => {
     const { history } = props
+    const location=useLocation()
     const classes = useStyles()
     // console.log(props)
     var aux = props.location.pathname
     aux = aux.split("/")
     // console.log(aux)
     const [tarjeta, setTarjeta] = useState([])
+    const [progress, setProgress] = useState('none')
+    const [exist, setExist] = useState('none')
 
     useEffect(() => {
         getTarjeta()
@@ -37,9 +46,17 @@ const TarjetaExistencia = (props) => {
 
     //--------------------GET TARJETA--------------------------------
     const getTarjeta = async () => {
+        setProgress('block')
         try {
             const result = await ipcRenderer.invoke("get-tarjetaExistencia", aux[4])
-            setTarjeta(JSON.parse(result))
+                .then(resp => {
+                    if (JSON.parse(resp.length) === 0) {
+                        setExist('block')
+                    }
+                    setProgress('none')
+                    setTarjeta(JSON.parse(resp))
+                    // setTarjeta(JSON.parse(result))
+                })
         } catch (error) {
             console.log(error)
         }
@@ -80,7 +97,7 @@ const TarjetaExistencia = (props) => {
         doc.setFontSize(9)
         doc.text(`Kadex N°:   ${aux[4]}`, 1, 1.35)
         doc.text(`Unidad:   ${aux[7]}`, 4, 1.35)
-        doc.text(`Articulo:   ${aux[5]}`, 1, 1.45)
+        doc.text(`Articulo:   ${location.data.nameSubMaterial}`, 1, 1.45)
         doc.text(`Stock Minimo :   ${aux[6]}`, 1, 1.55)
         // doc.autoTable({ html: "#id-table", styles: { fontSize: 9 }, margin: { top: 55 } })
         doc.autoTable({
@@ -125,7 +142,14 @@ const TarjetaExistencia = (props) => {
     }
     //--------------------------------------------------------------
     const irAtras = () => {
-        history.push(`/listaSubmateriales/${aux[2]}/${aux[3]}`)
+        // history.push(`/listaSubmateriales/${aux[2]}/${aux[3]}`)
+        history.push({
+            pathname: '/listaSubmateriales/' + location.data.codMaterial + '/' + location.data.nameMaterial,
+            data: { code: location.data.codMaterial, nameMaterial: location.data.nameMaterial },
+            search: '?update=true',
+            state: { update: true }
+        })
+
     }
     //--------------------------------------------------------------
     //--------------------------------------------------------------
@@ -140,7 +164,7 @@ const TarjetaExistencia = (props) => {
                     <Grid container spacing={3} >
                         <Grid item xs={12} sm={6}>
                             <Typography>Kardex N°: {aux[4]}</Typography>
-                            <Typography>Articulo: {aux[5]}</Typography>
+                            <Typography>Articulo: {location.data.nameSubMaterial}</Typography>
                             <Typography>Stock Minino: {aux[6]} "saldo inicio"</Typography>
 
                         </Grid>
@@ -199,23 +223,23 @@ const TarjetaExistencia = (props) => {
                 {/* ------------------------------------------------------------------------ */}
 
                 <Paper component={Box} p={0.3}>
-                    <TableContainer style={{ maxHeight: 500 }}>
-                        <Table id='id-table' style={{ minWidth: 1000 }} stickyHeader size='small'>
+                    <TableContainer style={{ maxHeight: 450 }}>
+                        <Table id='id-table' style={{ minWidth: 1000 }} border='1' stickyHeader size='small'>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell className={classes.styleTablehead}>Fecha</TableCell>
-                                    <TableCell className={classes.styleTablehead}>Pedido de Vale N°</TableCell>
-                                    <TableCell className={classes.styleTablehead}>Ingreso N°</TableCell>
-                                    <TableCell className={classes.styleTablehead}>Seccion</TableCell>
-                                    <TableCell className={classes.styleTablehead}>Entradas</TableCell>
-                                    <TableCell className={classes.styleTablehead}>Salidas</TableCell>
-                                    <TableCell className={classes.styleTablehead}>Saldo en Existecia</TableCell>
+                                    <TableCell className={classes.styleTablehead} align='center'>Fecha</TableCell>
+                                    <TableCell className={classes.styleTablehead} align='center'>Pedido de Vale N°</TableCell>
+                                    <TableCell className={classes.styleTablehead} align='center'>Ingreso N°</TableCell>
+                                    <TableCell className={classes.styleTablehead} align='center'>Seccion</TableCell>
+                                    <TableCell className={classes.styleTablehead} align='center'>Entradas</TableCell>
+                                    <TableCell className={classes.styleTablehead} align='center'>Salidas</TableCell>
+                                    <TableCell className={classes.styleTablehead} align='center'>Saldo en Existecia</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {tarjeta.length > 0 ? (
                                     tarjeta.filter(buscarInfoTarjeta(buscador)).map((t, index) => (
-                                        <TableRow key={index}>
+                                        <TableRow key={index} className={classes.tableRow}>
                                             <TableCell>{t.registerDate}</TableCell>
                                             <TableCell>{t.numVale}</TableCell>
                                             <TableCell>{t.numeroIngreso}</TableCell>
@@ -227,7 +251,11 @@ const TarjetaExistencia = (props) => {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan='7' align='center'>no se encuentran datos</TableCell>
+                                        <TableCell align='center' colSpan='7' style={{ display: progress }}>
+                                            <CircularProgress />
+                                            {/* <LinearProgress /> */}
+                                        </TableCell>
+                                        <TableCell style={{ display: exist }} colSpan='7' align='center'>no existen datos</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>

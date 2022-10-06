@@ -1,4 +1,4 @@
-import { makeStyles, Paper, Box, TableContainer, Table, TableBody, TableCell, TableHead, TableRow, Typography, Grid, TextField, InputAdornment, IconButton, Tooltip, Container } from '@material-ui/core'
+import { makeStyles, Paper, Box, TableContainer, Table, TableBody, TableCell, TableHead, TableRow, Typography, Grid, TextField, InputAdornment, IconButton, Tooltip, Container, CircularProgress } from '@material-ui/core'
 import React from 'react'
 import { useEffect } from 'react'
 import { useState } from 'react'
@@ -23,10 +23,17 @@ const useStyles = makeStyles((theme) => ({
         padding: 0,
 
     },
+    tableRow: {
+        "&:hover": {
+            backgroundColor: "#bbdefb"
+        }
+    }
 }))
 const ListaIngresoAlmacen = () => {
     const classes = useStyles()
     const [ingresoAlmacen, setIngresoAlmacen] = useState([])
+    const [progress, setProgress] = useState('none')
+    const [exist, setExist] = useState('none')
 
     useEffect(() => {
         getIngresoAlmacen()
@@ -34,9 +41,17 @@ const ListaIngresoAlmacen = () => {
 
     //----------------GET INGRESO ALMACEN---------------------
     const getIngresoAlmacen = async () => {
+        setProgress('block')
         try {
             const result = await ipcRenderer.invoke(`get-ingresoAlmacen`)
-            setIngresoAlmacen(JSON.parse(result))
+            .then(resp=>{
+                if (JSON.parse(resp.length) === 0) {
+                    setExist('block')
+                }
+                setProgress('none')
+                setIngresoAlmacen(JSON.parse(resp))
+                // setIngresoAlmacen(JSON.parse(result))
+            })
         } catch (error) {
             console.log(error)
         }
@@ -63,7 +78,7 @@ const ListaIngresoAlmacen = () => {
     }
     //--------------------------------------PDF GENERATE---------------------------------
     const pdfGenerate = () => {
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [14, 7] })
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [14, 11] })
         var pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth()
         var pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.height()
 
@@ -178,7 +193,7 @@ const ListaIngresoAlmacen = () => {
                 </Grid>
                 {/* --------------------------------------------------------------------------- */}
                 <Paper component={Box} p={1}>
-                    <TableContainer style={{ maxHeight: 550 }}>
+                    <TableContainer style={{ maxHeight: 450 }}>
                         <Table id='id-table' stickyHeader size='small'>
                             <TableHead>
                                 <TableRow>
@@ -201,7 +216,7 @@ const ListaIngresoAlmacen = () => {
                             <TableBody>
                                 {ingresoAlmacen.length > 0 ? (
                                     ingresoAlmacen.filter(buscarIngresosAlmacen(buscador)).map((i, index) => (
-                                        <TableRow key={index}>
+                                        <TableRow key={index} className={classes.tableRow}>
                                             <TableCell>{index + 1}</TableCell>
                                             <TableCell align='center'>{i.numeroIngreso}</TableCell>
                                             <TableCell align='center'>{i.numFactura}</TableCell>
@@ -216,7 +231,11 @@ const ListaIngresoAlmacen = () => {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell></TableCell>
+                                        <TableCell align='center'colSpan='9' style={{ display: progress }}>
+                                            <CircularProgress />
+                                            {/* <LinearProgress /> */}
+                                        </TableCell>
+                                        <TableCell style={{ display: exist }} colSpan='9' align='center'>no existen datos</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>

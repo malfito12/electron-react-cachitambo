@@ -1,4 +1,4 @@
-import { Container, Box, makeStyles, Toolbar, Paper, Dialog, Typography, TableContainer, Table, TableRow, TableCell, TableBody, TableHead, IconButton, Grid, InputAdornment, TextField, Button, Tooltip, AppBar } from '@material-ui/core'
+import { Container, Box, makeStyles, Paper, Dialog, Typography, TableContainer, Table, TableRow, TableCell, TableBody, TableHead, IconButton, Grid, InputAdornment, TextField, Button, Tooltip, CircularProgress, LinearProgress } from '@material-ui/core'
 import React from 'react'
 import { useEffect } from 'react'
 import { useState } from 'react'
@@ -11,24 +11,34 @@ import EditIcon from '@material-ui/icons/Edit'
 import DeleteIcon from '@material-ui/icons/Delete'
 import PrintIcon from '@material-ui/icons/Print';
 import sello from '../../../images/sello.png'
+import { useHistory } from 'react-router-dom'
 import { ErrorAlertsMateriales, SuccessAlertsMateriales } from '../../Atoms/Alerts/Alerts'
 
 const ipcRenderer = window.require('electron').ipcRenderer
 const useStyles = makeStyles((theme) => ({
     spacingBot: {
         marginBottom: '1rem'
+    },
+    tableRow: {
+        "&:hover": {
+            backgroundColor: "#bbdefb"
+        }
     }
 }))
 const ListaProduct = (props) => {
     // console.log(props)
     const classes = useStyles()
-    const { history } = props
+    // const { history } = props
+    const history=useHistory()
+    // console.log(history)
     const [material, setMaterial] = useState([])
     const [buscador, setBuscador] = useState("")
     const [openEditMaterial, setOpenEditMaterial] = useState(false)
     const [openDeleteMaterial, setOpenDeleteMaterial] = useState(false)
     const [openAlertSuccess, setOpenAlertSuccess] = useState(false)
     const [openAlertError, setOpenAlertError] = useState(false)
+    const [progress, setProgress] = useState('none')
+    const [exist, setExist] = useState('none')
     const [changeData, setChangeData] = useState({
         _id: '',
         codMaterial: '',
@@ -41,9 +51,17 @@ const ListaProduct = (props) => {
 
     //-------------GET MATERIALES-----------------------------
     const getMateriales = async () => {
+        setProgress('block')
         try {
             const result = await ipcRenderer.invoke('get-material')
-            setMaterial(JSON.parse(result))
+                .then(resp => {
+                    if (JSON.parse(resp.length) === 0) {
+                        setExist('block')
+                    }
+                    setProgress('none')
+                    setMaterial(JSON.parse(resp))
+                    // setMaterial(JSON.parse(result))
+                })
         } catch (error) {
             console.log(error)
         }
@@ -60,14 +78,14 @@ const ListaProduct = (props) => {
         e.preventDefault()
         // const id=changeData._id
         const result = await ipcRenderer.invoke("edit-material", changeData)
-        .then(resp=>{
-            getMateriales()
-            closeModalEditMaterial()
-            openCloseAlertSuccess()
-        })
-        .catch(err=>{
-            openCloseAlertError()
-        })
+            .then(resp => {
+                getMateriales()
+                closeModalEditMaterial()
+                openCloseAlertSuccess()
+            })
+            .catch(err => {
+                openCloseAlertError()
+            })
         // console.log(JSON.parse(result))
     }
     //-------------DELETE MATERIAL-----------------------------
@@ -82,14 +100,14 @@ const ListaProduct = (props) => {
         e.preventDefault()
         // const id=changeData._id
         const result = await ipcRenderer.invoke("delete-material", changeData)
-        .then(resp=>{
-            getMateriales()
-            closeModalDeleteMaterial()
-            openCloseAlertSuccess()
-        })
-        .catch(err=>{
-            openCloseAlertError()
-        })
+            .then(resp => {
+                getMateriales()
+                closeModalDeleteMaterial()
+                openCloseAlertSuccess()
+            })
+            .catch(err => {
+                openCloseAlertError()
+            })
         // console.log(JSON.parse(result))
     }
     //-------------COLOR DE TABLAS-----------------------------
@@ -110,7 +128,13 @@ const ListaProduct = (props) => {
     const irSubMateriales = (e) => {
         const code = e.codMaterial
         const nameMaterial = e.nameMaterial
-        history.push('/listaSubmateriales/' + code + '/' + nameMaterial)
+        history.push({
+            pathname:'/listaSubmateriales/' + code + '/' + nameMaterial,
+            data:{code:code,nameMaterial:nameMaterial},
+            search: '?update=true',
+            state: {update: true}
+        })
+        // history.push('/listaSubmateriales')
     }
     //-----------------------BUSCADOR---------------------------
     const buscarMaterial = (buscador) => {
@@ -122,15 +146,6 @@ const ListaProduct = (props) => {
 
         }
     }
-    var data = [
-        { id: '1', name: 'uno' },
-        { id: '2', name: 'dos' },
-        { id: '3', name: 'tres' },
-        { id: '4', name: 'cuanto' },
-        { id: '5', name: 'cinco' },
-        { id: '6', name: 'seis' },
-        { id: '7', name: 'siete' },
-    ]
     //--------------------IMPRIMIR-----------------------------
     const pdfGenerate = () => {
         const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: [11, 7] })
@@ -221,7 +236,6 @@ const ListaProduct = (props) => {
                                 style={{ background: 'white', borderRadius: 5, marginRight: '1rem' }}
                                 variant='outlined'
                                 size='small'
-                                // fullWidth
                                 InputProps={{
                                     startAdornment: (
                                         <>
@@ -251,8 +265,8 @@ const ListaProduct = (props) => {
                     </div>
                 </Grid>
                 <Paper component={Box} p={0.3}>
-                    <TableContainer style={{ maxHeight: 550 }}>
-                        <Table id='id-table' stickyHeader size='small'>
+                    <TableContainer style={{ maxHeight: 450 }}>
+                        <Table id='id-table' stickyHeader size='small' >
                             <TableHead>
                                 <TableRow>
                                     <TableCell style={{ color: 'white', backgroundColor: "black" }}>N°</TableCell>
@@ -265,18 +279,18 @@ const ListaProduct = (props) => {
                             <TableBody>
                                 {material.length > 0 ? (
                                     material.filter(buscarMaterial(buscador)).map((m, index) => (
-                                        <TableRow key={m._id} style={getTableColor(index)}>
+                                        <TableRow key={m._id} /*style={getTableColor(index)}*/ className={classes.tableRow}>
                                             <TableCell /*style={{ fontSize: '10px' }}*/>{index + 1}</TableCell>
                                             <TableCell>{m.codMaterial}</TableCell>
                                             <TableCell>{m.nameMaterial}</TableCell>
-                                            <TableCell align='center'>
+                                            <TableCell align='center' style={{ padding: 0, margin: 0 }}>
                                                 <Tooltip title='sub-materiales'>
                                                     <IconButton size='small' onClick={() => irSubMateriales(m)}>
                                                         <TableChartIcon />
                                                     </IconButton>
                                                 </Tooltip>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell style={{ padding: 0, margin: 0 }}>
                                                 <Grid container justifyContent='space-evenly'>
                                                     <Tooltip title='edit'>
                                                         <IconButton size='small' style={{ color: 'green' }} onClick={() => openModalEditMaterial(m)}>
@@ -294,7 +308,11 @@ const ListaProduct = (props) => {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan='5' align='center'>no existen datos</TableCell>
+                                        <TableCell align='center'colSpan='5' style={{ display: progress }}>
+                                            <CircularProgress />
+                                            {/* <LinearProgress /> */}
+                                        </TableCell>
+                                        <TableCell style={{ display: exist }} colSpan='5' align='center'>no existen datos</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>

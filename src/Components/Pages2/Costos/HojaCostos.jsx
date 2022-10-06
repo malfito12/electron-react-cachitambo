@@ -1,4 +1,4 @@
-import { Box, makeStyles, Paper, Typography, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Grid, Button, AppBar, Toolbar, TextField, InputAdornment, Container, IconButton, Tooltip } from '@material-ui/core'
+import { Box, makeStyles, Paper, Typography, Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Grid, TextField, InputAdornment, Container, IconButton, Tooltip, TableFooter, CircularProgress } from '@material-ui/core'
 import React, { useState } from 'react'
 import { useEffect } from 'react'
 import jsPDF from 'jspdf'
@@ -11,13 +11,19 @@ const ipcRenderer = window.require('electron').ipcRenderer
 const useStyles = makeStyles((theme) => ({
     spacingBot: {
         marginBottom: '1rem'
+    },
+    tableRow: {
+        "&:hover": {
+            backgroundColor: "#bbdefb"
+        }
     }
 }))
 const HojaCostos = () => {
     const classes = useStyles()
     const [material, setMaterial] = useState([])
     const [saldoTotalMaterial, setSaldoTotalMaterial] = useState([])
-
+    const [progress, setProgress] = useState('none')
+    const [exist, setExist] = useState('none')
     useEffect(() => {
         getMateriales()
         getSaldoTotalMaterial()
@@ -33,11 +39,28 @@ const HojaCostos = () => {
     }
     //-------------------GET SALTO TOTAL MATERIAL-----------------------------
     const getSaldoTotalMaterial = async () => {
+        setProgress('block')
         try {
             const result = await ipcRenderer.invoke("get-saldoTotalMaterial")
-            setSaldoTotalMaterial(JSON.parse(result))
+            .then(resp=>{
+                if (JSON.parse(resp.length) === 0) {
+                    setExist('block')
+                }
+                setProgress('none')
+                setSaldoTotalMaterial(JSON.parse(resp))
+                // setSaldoTotalMaterial(JSON.parse(result))
+            })
         } catch (error) {
             console.log(error)
+        }
+    }
+    //----------------------------------------------------------
+    var sumTotal=0;
+    if(saldoTotalMaterial.length>0){
+        for(var i=0;i<saldoTotalMaterial.length;i++){
+            // console.log(parseFloat(saldoTotalMaterial[i].saldoTotal))
+            var num=parseFloat(saldoTotalMaterial[i].otroSaldo)
+            sumTotal=sumTotal+num
         }
     }
     //----------------------------------------------------------
@@ -79,6 +102,10 @@ const HojaCostos = () => {
             bodyStyles: {
                 cellPadding: 0.01
             },
+            footStyles: {
+                fillColor: [50, 50, 50],
+                cellPadding: 0.01
+            },
             head: [[
                 { content: 'N°' },
                 { content: 'Codigo', styles: { halign: 'center' } },
@@ -93,6 +120,16 @@ const HojaCostos = () => {
             ])),
             styles: { fontSize: 8, font: 'courier', fontStyle: 'bold' },
             startY: 1.3,
+        })
+        doc.autoTable({
+            body: [
+                [
+                    { content: 'Total', colSpan: 3 },
+                    { content: sumTotal.toFixed(2), styles: { halign: 'right' } }
+                ]
+            ],
+            styles: { fontSize: 8, font: 'courier', fontStyle: 'bold' },
+            startY: doc.lastAutoTable.finalY+0.1,
         })
         var pages = doc.internal.getNumberOfPages()
         for (var i = 1; i <= pages; i++) {
@@ -152,7 +189,7 @@ const HojaCostos = () => {
                 </Grid>
                 {/* ------------------------------------------------------------------*/}
                 <Paper component={Box} p={0.3}>
-                    <TableContainer style={{ maxHeight: 540 }}>
+                    <TableContainer style={{ maxHeight: 450 }}>
                         <Table id='id-table' stickyHeader size='small'>
                             <TableHead>
                                 <TableRow>
@@ -166,7 +203,7 @@ const HojaCostos = () => {
                             <TableBody>
                                 {array.length > 0 ? (
                                     array.filter(buscarHojaCosto(buscador)).map((m, index) => (
-                                        <TableRow key={m._id}>
+                                        <TableRow key={m._id} className={classes.tableRow}>
                                             <TableCell>{index + 1}</TableCell>
                                             <TableCell>{m.codMaterial}</TableCell>
                                             <TableCell>{m.nameMaterial}</TableCell>
@@ -175,10 +212,22 @@ const HojaCostos = () => {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan='5' align='center'>no existe informacion</TableCell>
+                                        <TableCell align='center'colSpan='5' style={{ display: progress }}>
+                                            <CircularProgress />
+                                            {/* <LinearProgress /> */}
+                                        </TableCell>
+                                        <TableCell style={{ display: exist }} colSpan='5' align='center'>no existen datos</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
+                            <TableFooter>
+                                <TableRow>
+                                    <TableCell colSpan={3}>Total</TableCell>
+                                    {/* <TableCell align='right'>{sumTotal}</TableCell> */}
+                                    <TableCell align='right'>{new Intl.NumberFormat('es-BO').format(sumTotal)}</TableCell>
+                                    
+                                </TableRow>
+                            </TableFooter>
                         </Table>
                     </TableContainer>
                 </Paper>

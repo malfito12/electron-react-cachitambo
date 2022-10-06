@@ -1,18 +1,22 @@
-import { Container, Box, MenuItem, Grid, makeStyles, TextField, Typography, TableContainer, Table, TableHead, TableRow, TableCell, Paper, TableBody, Button } from '@material-ui/core'
+import { Container, Box, MenuItem, Grid, makeStyles, TextField, Typography, TableContainer, Table, TableHead, TableRow, TableCell, Paper, TableBody, Button, Tooltip, IconButton, Dialog, TableFooter, InputAdornment } from '@material-ui/core'
 import React, { useEffect, useState } from 'react'
+import { v4 as uuidv4 } from 'uuid';
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import sello from '../../../images/sello.png'
 import ArchiveIcon from '@material-ui/icons/Archive';
 import SaveIcon from '@material-ui/icons/Save';
 import PrintIcon from '@material-ui/icons/Print';
-import { ErrorPrintIngresoMat, ErrorRegisterIngresoMat, SuccessRegisterIngresoMat } from '../../Atoms/Alerts/Alerts'
+import EditIcon from '@material-ui/icons/Edit';
+import DeleteIcon from '@material-ui/icons/Delete';
+import SearchIcon from '@material-ui/icons/Search';
+import { ErrorDuplicidad, ErrorPrintIngresoMat, ErrorRegisterIngresoMat, SuccessRegisterIngresoMat } from '../../Atoms/Alerts/Alerts'
 
 
 const ipcRenderer = window.require('electron').ipcRenderer
 const useStyles = makeStyles((theme) => ({
     spacingBot: {
-        marginBottom: '1rem'
+        marginBottom: '0.5rem',
     },
     styleTablehead: {
         color: 'white',
@@ -20,17 +24,25 @@ const useStyles = makeStyles((theme) => ({
         align: 'center',
         fontSize: 'small',
         padding: 0,
+    },
+    tableRow: {
+        "&:hover": {
+            backgroundColor: "#bbdefb"
+        }
     }
 }))
 const IngresoMateriales = () => {
     const classes = useStyles()
     const [material, setMaterial] = useState([])
+    const [deleteArrayData, setDeleteArrayData] = useState(false)
     const [subMaterial, setSubMaterial] = useState([])
-    const [unidadMedida, setUnidadMedida] = useState([])
+    const [unidadM, setUnidadM] = useState([])
     const [numeroIngreso, setNumeroIngreso] = useState([])
+    const [modalEditData, setModalEditData] = useState(false)
     const [openAlertPrintError, setOpenAlertPrintError] = useState(false)
     const [openAlertRegisterError, setOpenAlertRegisterError] = useState(false)
     const [openAlertRegisterSuccess, setOpenAlertRegisterSuccess] = useState(false)
+    const [openAlertDuplicidad, setOpenAlertDuplicidad] = useState(false)
     const [changeData, setChageData] = useState({
         typeRegister: 'entrada',
         numFactura: '',
@@ -41,23 +53,27 @@ const IngresoMateriales = () => {
         deDonde: '',
         unidadMedida: '',
         precio: '',
-        precioUnitario: '',
+        // precioUnitario: '',
         procedenciaDestino: '',
         registerDate: '',
-        // image: ''
+        numeroIngreso: '',
+        codMaterial: '',
+        codSubMaterial: '',
     })
 
     useEffect(() => {
         getMaterial()
-        getUnidadMedida()
-        getNumeroIngreso()
+        // getNumeroIngreso()
     }, [])
 
     //------------GET MATERIAL-------------------------------
     const getMaterial = async () => {
         try {
             const result = await ipcRenderer.invoke('get-material')
-            setMaterial(JSON.parse(result))
+                .then(resp => {
+                    setMaterial(JSON.parse(resp))
+                })
+                .catch(err => console.log(err))
         } catch (error) {
             console.log(error)
         }
@@ -66,15 +82,22 @@ const IngresoMateriales = () => {
     const postEntradas = async (e) => {
         e.preventDefault()
         if (uno.length > 0) {
-            try {
-                const result = await ipcRenderer.invoke('post-entradas', uno)
-                console.log(JSON.parse(result))
-                openCloseAlertRegisterSuccess()
-                setTimeout(() => { setOpenAlertRegisterSuccess(false) }, 4000)
-            } catch (error) {
-                console.log(error)
-                openCloseAlertRegisterError()
-                setTimeout(() => { setOpenAlertRegisterError(false) }, 4000)
+            if (deleteArrayData === true) {
+                openCloseAlertDuplicidad()
+                setTimeout(() => { setOpenAlertDuplicidad(false) }, 4000)
+                return
+            } else {
+                try {
+                    const result = await ipcRenderer.invoke('post-entradas', uno)
+                    console.log(JSON.parse(result))
+                    openCloseAlertRegisterSuccess()
+                    setTimeout(() => { setOpenAlertRegisterSuccess(false) }, 4000)
+                    setDeleteArrayData(true)
+                } catch (error) {
+                    console.log(error)
+                    openCloseAlertRegisterError()
+                    setTimeout(() => { setOpenAlertRegisterError(false) }, 4000)
+                }
             }
         } else {
             openCloseAlertRegisterError()
@@ -83,21 +106,48 @@ const IngresoMateriales = () => {
 
     }
     //---------------------GET NUMERO DE INGRESO-------------------------
-    const getNumeroIngreso = async () => {
+    // const getNumeroIngreso = async () => {
+    //     try {
+    //         const result = await ipcRenderer.invoke(`get-numeroIngreso`)
+    //         setNumeroIngreso(JSON.parse(result))
+    //     } catch (error) {
+    //         console.log(error)
+    //     }
+    // }
+    //-----------------------GET MATERIAL ESPECIFICO------------------------
+    const getSpecificMaterial = async () => {
+        const data = changeData.codMaterial
         try {
-            const result = await ipcRenderer.invoke(`get-numeroIngreso`)
-            setNumeroIngreso(JSON.parse(result))
+            const result = await ipcRenderer.invoke('get-specific-material', data)
+                .then(resp => {
+                    const aux = JSON.parse(resp)
+                    const lala = { target: { name: 'nameMaterial', value: aux[0].codMaterial + '/' + aux[0].nameMaterial } }
+                    handleChange(lala)
+                })
         } catch (error) {
             console.log(error)
         }
     }
-    //----------------------------------------------------
-    //----------------------------------------------------
-    //----------------GET UNIDAD DE MEDIDA---------------------
-    const getUnidadMedida = async () => {
+    //----------------------GET SUB MATERIAL SPECIFICO--------------------------
+    const getSpecificSubMaterial = async () => {
+        const data = changeData.codSubMaterial
         try {
-            const result = await ipcRenderer.invoke('get-unidadMedida')
-            setUnidadMedida(JSON.parse(result))
+            const result = await ipcRenderer.invoke('get-specific-sub-material', data)
+                .then(resp => {
+                    // console.log(JSON.parse(resp))
+                    const aux = JSON.parse(resp)
+                    const lala = { target: { name: 'nameSubMaterial', value: aux[0].codSubMaterial + '/' + aux[0].nameSubMaterial } }
+                    handleChange(lala)
+                })
+        } catch (error) {
+            console.log(error)
+        }
+    }
+    //----------------GET UNIDAD DE MEDIDA---------------------
+    const getUnidad = async (e) => {
+        try {
+            const result = await ipcRenderer.invoke('get-um', e)
+            setUnidadM(JSON.parse(result))
         } catch (error) {
             console.log(error)
         }
@@ -114,59 +164,117 @@ const IngresoMateriales = () => {
     }
     //-------------------TABLA AUXILIAR--------------------------
     const [uno, setUno] = useState([])
+    const [sum, setSum] = useState(0)
     var dos;
     const introducir = (e) => {
         e.preventDefault()
+        // console.log(changeData)
+        // sum=sum+changeData.precio
+        setSum(sum + parseFloat(changeData.precio))
         var aux = changeData.nameSubMaterial
         var aux2 = changeData.nameMaterial
         aux = aux.split("/")
         aux2 = aux2.split("/")
+        var fecha = changeData.registerDate
+        var change = fecha.split('-')
+        var newFecha = change[2] + '-' + change[1] + '-' + change[0]
         const nuevo = { nameSubMaterial: aux[1], codSubMaterial: aux[0], nameMaterial: aux2[1], codMaterial: aux2[0] }
-        dos = { ...changeData, ...nuevo }
+        dos = { ...changeData, ...nuevo, id: uuidv4(), registerDate: newFecha,idAlmacen:uuidv4() }
+        // console.log(dos)
 
         setUno([...uno, dos])
         document.getElementById('cantidadF').value = ""
         document.getElementById('cantidadR').value = ""
         document.getElementById('precio').value = ""
-        document.getElementById('precioUnitario').value = ""
+        // document.getElementById('precioUnitario').value = ""
     }
     // console.log(uno)
-    //-------------------HANDLECHANGE--------------------------
-    const handleChange = (e) => {
-        // console.log(aux)
-        if (e.target.name === 'nameMaterial') {
-            var aux = e.target.value
-            aux = aux.split("/")
-            getSubMaterial(aux[0])
+    //---------------------DELETE DATA---------------------
+    const deleteData = (e) => {
+        // console.log(e)
+        var newArray = uno.filter((item) => item.id !== e.id);
+        setSum(sum - parseFloat(e.precio))
+        setUno(newArray)
+        // setSum(sum-)
+        if (uno.length === 1) {
+            setDeleteArrayData(false)
         }
+    }
+    //---------------------DELETE DATA---------------------
+    const deleteArray = () => {
+        setUno([])
+        setDeleteArrayData(false)
+        setSum(0)
+    }
+    //---------------------EDIT DATA---------------------
+    const openModalEditData = (e) => {
+        console.log(e)
+        setChageData(e)
+        setModalEditData(true)
+    }
+    const closeModalEditData = () => {
+        setModalEditData(false)
+    }
+    const editData = (e) => {
+        e.preventDefault()
+        const indice = uno.findIndex((elemento, indice) => {
+            if (elemento.id === changeData.id) {
+                return true;
+            }
+        })
+        uno[indice] = changeData;
+        closeModalEditData()
+        // setUno(newArray)
+    }
+    //-------------------HANDLECHANGE EDIT--------------------------
+    const handleChangeEdit = (e) => {
         setChageData({
             ...changeData,
             [e.target.name]: e.target.value
         })
     }
+    //-------------------HANDLECHANGE--------------------------
+    const handleChange = (e) => {
+        // console.log(e)
+        if (e.target.name === 'nameMaterial') {
+            var aux = e.target.value
+            aux = aux.split("/")
+            getSubMaterial(aux[0])
+        }
+        if (e.target.name === 'nameSubMaterial') {
+            var aux = e.target.value
+            aux = aux.split("/")
+            getUnidad(aux[0])
+        }
+        setChageData({
+            ...changeData,
+            unidadMedida: unidadM.length > 0 ? unidadM[0].unidadMedida : '',
+            [e.target.name]: e.target.value
+        })
+    }
     // console.log(numeroIngreso)
     //----------------------PDF GENERATE------------------------
-    var aux;
-    var aux2 = 0;
-    var numIn;
-    var quebrado = new Date()
-    quebrado = quebrado.toString()
-    quebrado = quebrado.split("")
-    try {
-        aux = numeroIngreso[0].numeroIngreso
-        aux = aux.split("-")
-        aux = parseInt(aux[1])
-        aux = aux + 1
-        aux = aux.toString()
-        numIn = "IAC-" + aux + " /" + quebrado[13] + quebrado[14]
-        // numIn = aux
-    } catch (error) {
-        aux2++;
-        aux2 = aux2.toString()
-        numIn = "IAC-" + aux2 + " /" + quebrado[13] + quebrado[14]
-        // numIn = aux2
+    // var aux;
+    // var aux2 = 0;
+    // var numIn;
+    // var quebrado = new Date()
+    // quebrado = quebrado.toString()
+    // quebrado = quebrado.split("")
+    // try {
+    //     aux = numeroIngreso[0].numeroIngreso
+    //     aux = aux.split("-")
+    //     aux = parseInt(aux[1])
+    //     aux = aux + 1
+    //     aux = aux.toString()
+    //     numIn = "IAC-" + aux + " /" + quebrado[13] + quebrado[14]
+    //     // numIn = aux
+    // } catch (error) {
+    //     aux2++;
+    //     aux2 = aux2.toString()
+    //     numIn = "IAC-" + aux2 + " /" + quebrado[13] + quebrado[14]
+    //     // numIn = aux2
 
-    }
+    // }
     const pdfGenerate = async () => {
         if (uno.length > 0) {
             const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: [11, 7] })
@@ -178,7 +286,8 @@ const IngresoMateriales = () => {
             doc.text(`INGRESO DE MATERIALES A ALMACEN`, pageWidth / 2, 1, 'center')
             doc.setFontSize(8)
             // // doc.text(`N°:  ${uno[0].numNIT}`, 140, 30)
-            doc.text(`N°: ${numIn}`, 5, 0.7)
+            // doc.text(`N°: ${numIn}`, 5, 0.7)
+            doc.text(`N°: ${uno[0].numeroIngreso}`, 5, 0.7)
             doc.text(`Potosi : ${uno[0].registerDate}`, 2, 1.2)
             doc.text(`Factura : ${uno[0].numFactura}`, 0.6, 1.35)
             doc.text(`Pedido N° : `, 0.6, 1.5)
@@ -195,6 +304,10 @@ const IngresoMateriales = () => {
             doc.text(`Fecha hoja de costo : `, 4.6, 1.8)
             doc.autoTable({
                 headStyles: {
+                    fillColor: [50, 50, 50],
+                    cellPadding: 0.01
+                },
+                footStyles: {
                     fillColor: [50, 50, 50],
                     cellPadding: 0.01
                 },
@@ -225,6 +338,12 @@ const IngresoMateriales = () => {
                     { content: d.codSubMaterial ? d.codSubMaterial : "", styles: { halign: 'center' } },
                     { content: d.precio ? d.precio : "", styles: { halign: 'right' } },
                 ])),
+                foot: [
+                    [
+                        { content: 'Total', colSpan: 6 },
+                        { content: sum.toFixed(2), styles: { halign: 'right' } }
+                    ]
+                ],
                 styles: { fontSize: 8, font: 'courier', fontStyle: 'bold' },
                 startY: 2.2,
             })
@@ -257,8 +376,11 @@ const IngresoMateriales = () => {
     const openCloseAlertRegisterSuccess = () => {
         setOpenAlertRegisterSuccess(!openAlertRegisterSuccess)
     }
+    const openCloseAlertDuplicidad = () => {
+        setOpenAlertDuplicidad(!openAlertDuplicidad)
+    }
 
-    // console.log(material)
+    // console.log(uno)
     // console.log(changeData)
     // console.log(subMaterial)
     return (
@@ -270,6 +392,18 @@ const IngresoMateriales = () => {
                     <Grid container spacing={3}>
                         <Grid item xs={12} sm={6}>
                             <TextField
+                                name='numeroIngreso'
+                                label='N° de Ingreso'
+                                variant='outlined'
+                                className={classes.spacingBot}
+                                fullWidth
+                                size='small'
+                                onChange={handleChange}
+                                value={changeData.numeroIngreso}
+                                style={{ background: 'white', borderRadius: 5 }}
+                                required
+                            />
+                            <TextField
                                 name='numFactura'
                                 label='N° de Factura'
                                 variant='outlined'
@@ -279,6 +413,24 @@ const IngresoMateriales = () => {
                                 onChange={handleChange}
                                 style={{ background: 'white', borderRadius: 5 }}
                                 required
+                            />
+                            <TextField
+                                name='codMaterial'
+                                label='Codigo de Material'
+                                variant='outlined'
+                                fullWidth
+                                size='small'
+                                // value={changeData.codMaterial}
+                                className={classes.spacingBot}
+                                style={{ background: 'white', borderRadius: 5 }}
+                                onChange={handleChange}
+                                InputProps={{
+                                    endAdornment: (
+                                        <IconButton size='small' onClick={getSpecificMaterial} component='span' style={{ color: 'white', background: '#2979ff' }}>
+                                            <SearchIcon />
+                                        </IconButton>
+                                    )
+                                }}
                             />
                             <TextField
                                 name='nameMaterial'
@@ -297,6 +449,23 @@ const IngresoMateriales = () => {
                                     <MenuItem key={m._id} value={`${m.codMaterial}/${m.nameMaterial}`} >{m.nameMaterial}</MenuItem>
                                 ))}
                             </TextField>
+                            <TextField
+                                name='codSubMaterial'
+                                label='Codigo Sub Material'
+                                variant='outlined'
+                                fullWidth
+                                size='small'
+                                className={classes.spacingBot}
+                                style={{ background: 'white', borderRadius: 5 }}
+                                onChange={handleChange}
+                                InputProps={{
+                                    endAdornment: (
+                                        <IconButton size='small' onClick={getSpecificSubMaterial} component='span' style={{ color: 'white', background: '#2979ff' }}>
+                                            <SearchIcon />
+                                        </IconButton>
+                                    )
+                                }}
+                            />
                             <TextField
                                 name='nameSubMaterial'
                                 label='Nombre Sub-Material'
@@ -361,21 +530,16 @@ const IngresoMateriales = () => {
                                 variant='outlined'
                                 fullWidth
                                 size='small'
-                                select
-                                value={changeData.unidadMedida}
+                                value={unidadM.length > 0 ? unidadM[0].unidadMedida : ''}
                                 className={classes.spacingBot}
-                                onChange={handleChange}
+                                // onChange={handleChange}
                                 style={{ background: 'white', borderRadius: 5 }}
                                 required
-                            >
-                                {unidadMedida && unidadMedida.map((u, index) => (
-                                    <MenuItem key={index} value={u.nameUnidadMedida}>{u.nameUnidadMedida}</MenuItem>
-                                ))}
-                            </TextField>
-                            <TextField
-                                id='precio'
-                                name='precio'
-                                label='Valor o Precio Bs.'
+                            />
+                            {/* <TextField
+                                id='precioUnitario'
+                                name='precioUnitario'
+                                label='Precio Unitario Bs.'
                                 variant='outlined'
                                 fullWidth
                                 type='number'
@@ -385,11 +549,11 @@ const IngresoMateriales = () => {
                                 onChange={handleChange}
                                 style={{ background: 'white', borderRadius: 5 }}
                                 required
-                            />
+                            /> */}
                             <TextField
-                                id='precioUnitario'
-                                name='precioUnitario'
-                                label='Precio Unitario Bs.'
+                                id='precio'
+                                name='precio'
+                                label='Valor o Precio Bs.'
                                 variant='outlined'
                                 fullWidth
                                 type='number'
@@ -426,7 +590,7 @@ const IngresoMateriales = () => {
                             />
                         </Grid>
                     </Grid>
-                    <div align='center' style={{ marginTop: '1rem' }} >
+                    <div align='center' style={{ marginTop: '0.5rem' }} >
                         <Button
                             size='small'
                             endIcon={<ArchiveIcon />}
@@ -443,18 +607,20 @@ const IngresoMateriales = () => {
                     <ErrorPrintIngresoMat open={openAlertPrintError} setOpen={openCloseAlertPrintError} />
                     <ErrorRegisterIngresoMat open={openAlertRegisterError} setOpen={openCloseAlertRegisterError} />
                     <SuccessRegisterIngresoMat open={openAlertRegisterSuccess} setOpen={openCloseAlertRegisterSuccess} />
+                    <ErrorDuplicidad open={openAlertDuplicidad} setOpen={openCloseAlertDuplicidad} />
                 </div>
                 {/* ---------------------------------------------------- */}
                 <Paper component={Box} p={0.3}>
-                    <TableContainer>
-                        <Table border='1' id='id-table' style={{ minWidth: 800 }}>
-                            <TableHead>
+                    <TableContainer style={{ maxHeight: 200 }} >
+                        <Table border='1' id='id-table' size='small'>
+                            <TableHead >
                                 <TableRow>
                                     <TableCell className={classes.styleTablehead} rowSpan='2' align='center' style={{ width: '10%' }}>Item del Pedido</TableCell>
                                     <TableCell className={classes.styleTablehead} colSpan='2' align='center' style={{ width: '20%' }}>Cantidad</TableCell>
                                     <TableCell className={classes.styleTablehead} rowSpan='2' align='center' style={{ width: '15%' }}>Unidad</TableCell>
-                                    <TableCell className={classes.styleTablehead} rowSpan='2' align='center' style={{ width: '35%' }}>Descripcion</TableCell>
+                                    <TableCell className={classes.styleTablehead} rowSpan='2' align='center' style={{ width: '25%' }}>Descripcion</TableCell>
                                     <TableCell className={classes.styleTablehead} colSpan='2' align='center' style={{ width: '20%' }}>Registro de Existencia</TableCell>
+                                    <TableCell className={classes.styleTablehead} rowSpan='2' align='center' style={{ width: '10%' }}>Acciones</TableCell>
                                 </TableRow>
                                 <TableRow>
                                     <TableCell className={classes.styleTablehead} align='center'>Facturada</TableCell>
@@ -466,24 +632,46 @@ const IngresoMateriales = () => {
                             <TableBody>
                                 {uno.length > 0 ? (
                                     uno.map((u, index) => (
-                                        <TableRow key={index}>
+                                        <TableRow key={index} className={classes.tableRow}>
                                             <TableCell>{index + 1}</TableCell>
-                                            <TableCell>{u.cantidadF}</TableCell>
-                                            <TableCell>{u.cantidadR}</TableCell>
+                                            <TableCell align='right'>{u.cantidadF}</TableCell>
+                                            <TableCell align='right'>{u.cantidadR}</TableCell>
                                             <TableCell>{u.unidadMedida}</TableCell>
                                             <TableCell>{u.nameSubMaterial}</TableCell>
                                             <TableCell>{u.codSubMaterial}</TableCell>
-                                            <TableCell>{u.precio}</TableCell>
+                                            <TableCell align='right'>{u.precio}</TableCell>
+                                            <TableCell>
+                                                <Grid container justifyContent='space-evenly'>
+                                                    <Tooltip title='edit'>
+                                                        <IconButton style={{ width: 0, height: 0, color: 'green' }} onClick={() => openModalEditData(u)}>
+                                                            <EditIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title='delete'>
+                                                        {/* <IconButton style={{ width: 0, height: 0, color: 'red' }} onClick={() => deleteData(u.id)}> */}
+                                                        <IconButton style={{ width: 0, height: 0, color: 'red' }} onClick={() => deleteData(u)}>
+                                                            <DeleteIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Grid>
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell align='center' colSpan='7'>no se encuentran datos</TableCell>
+                                        <TableCell align='center' colSpan='8'>no se encuentran datos</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
                         </Table>
                     </TableContainer>
+                </Paper>
+                <Paper component={Box} m={0.1}>
+                    <Grid container direction='row' justifyContent='space-between'>
+
+                        <Typography style={{ padding: 5 }}>Total </Typography>
+                        <Typography style={{ padding: 5, paddingRight: 20 }}> {sum.toFixed(2)}</Typography>
+                    </Grid>
                 </Paper>
                 <div align='center' style={{ marginTop: '1rem' }} >
                     <Button
@@ -509,8 +697,70 @@ const IngresoMateriales = () => {
                         size='small'
                         onClick={pdfGenerate}
                     >imprimir</Button>
+                    <Button
+                        style={{
+                            color: 'white',
+                            background: 'linear-gradient(45deg, #d32f2f 30%, #ef5350 90%)',
+                            marginLeft: '4rem'
+                        }}
+                        variant='contained'
+                        color='primary'
+                        endIcon={<DeleteIcon />}
+                        onClick={deleteArray}
+                        size='small'
+                    >Eliminar</Button>
                 </div>
             </Container>
+
+            {/* ---------------------------MODAL EDIT DATA----------------------------- */}
+            <Dialog
+                open={modalEditData}
+                onClose={closeModalEditData}
+                maxWidth='md'
+            >
+                <Paper component={Box} p={2}>
+                    <Typography variant='subtitle2' align='center' style={{ marginBottom: '1rem' }}>ACTUALIZAR</Typography>
+                    <Grid container direction='column'>
+                        <TextField
+                            name='cantidadF'
+                            variant='outlined'
+                            size='small'
+                            style={{ marginBottom: '1rem' }}
+                            defaultValue={changeData.cantidadF}
+                            inputProps={{ step: 'any' }}
+                            type='number'
+                            label='Cantidad Facturada'
+                            onChange={handleChangeEdit}
+                        />
+                        <TextField
+                            name='cantidadR'
+                            variant='outlined'
+                            size='small'
+                            style={{ marginBottom: '1rem' }}
+                            inputProps={{ step: 'any' }}
+                            type='number'
+                            defaultValue={changeData.cantidadR}
+                            label='Cantidad Recibida'
+                            onChange={handleChangeEdit}
+                        />
+                        <TextField
+                            name='precio'
+                            variant='outlined'
+                            size='small'
+                            style={{ marginBottom: '1rem' }}
+                            defaultValue={changeData.precio}
+                            inputProps={{ step: 'any' }}
+                            type='number'
+                            label='Precio'
+                            onChange={handleChangeEdit}
+                        />
+                    </Grid>
+                    <Grid container justifyContent='space-evenly'>
+                        <Button variant='contained' color='primary' size='small' onClick={editData}>aceptar</Button>
+                        <Button variant='contained' color='secondary' size='small' onClick={closeModalEditData}>cancelar</Button>
+                    </Grid>
+                </Paper>
+            </Dialog>
         </>
     )
 }

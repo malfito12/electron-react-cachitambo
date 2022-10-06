@@ -1,4 +1,4 @@
-import { Button, Dialog, Paper, Box, Container, Grid, Tooltip, TableCell, makeStyles, Typography, TableContainer, Table, TableHead, TableRow, TableBody, IconButton, InputAdornment, TextField, MenuItem, AppBar, Toolbar } from '@material-ui/core'
+import { Button, Dialog, Paper, Box, Container, Grid, Tooltip, TableCell, makeStyles, Typography, TableContainer, Table, TableHead, TableRow, TableBody, IconButton, InputAdornment, TextField, CircularProgress } from '@material-ui/core'
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useEffect } from 'react'
@@ -9,24 +9,33 @@ import CreditCardIcon from '@material-ui/icons/CreditCard';
 import ImageIcon from '@material-ui/icons/Image';
 import SearchIcon from '@material-ui/icons/Search';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
-import EditIcon from '@material-ui/icons/Edit';
 import DeleteIcon from '@material-ui/icons/Delete';
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import sello from '../../../images/sello.png'
 import PrintIcon from '@material-ui/icons/Print';
+import { useHistory, useLocation } from 'react-router-dom'
 
 const ipcRenderer = window.require('electron').ipcRenderer
 const useStyles = makeStyles((theme) => ({
     spacingBot: {
         marginBottom: '1rem'
+    },
+    tableRow: {
+        "&:hover": {
+            backgroundColor: "#bbdefb"
+        }
     }
 }))
 const ListaSubmateriales = (props) => {
     const classes = useStyles()
-    // console.log(props)
-    const { history } = props
-    var url = props.location.pathname
+    // const { history } = props
+    const location = useLocation()
+    // console.log(location)
+    const history=useHistory()
+    // console.log(history)
+    // var url = props.location.pathname
+    var url = history.location.pathname
     url = url.split("/")
     // console.log(url)
     var array = []
@@ -37,6 +46,8 @@ const ListaSubmateriales = (props) => {
     const [subMaterialTotal, setSubMaterialTotal] = useState([])
     const [unidadMedida, setUnidadMedida] = useState([])
     const [openImage, setOpenImage] = useState(false)
+    const [progress, setProgress] = useState('none')
+    const [exist, setExist] = useState('none')
     const [openImageDelete, setOpenImageDelete] = useState(false)
     const [changeData, setChangeData] = useState({
         _id: "",
@@ -56,9 +67,17 @@ const ListaSubmateriales = (props) => {
 
     //---------------GET SUB-MATERIALES------------------------
     const getSubMaterial = async () => {
+        setProgress('flex')
         try {
             const result = await ipcRenderer.invoke('get-submaterial', url[2])
-            setSubMaterial(JSON.parse(result))
+                .then(resp => {
+                    if (JSON.parse(resp.length) === 0) {
+                        setExist('flex')
+                    }
+                    setProgress('none')
+                    // setSubMaterial(JSON.parse(result))
+                    setSubMaterial(JSON.parse(resp))
+                })
             const result2 = await ipcRenderer.invoke("get-subMaterial-total", url[2])
             setSubMaterialTotal(JSON.parse(result2))
         } catch (error) {
@@ -97,7 +116,8 @@ const ListaSubmateriales = (props) => {
     //-------------------GET SUB - MATERIALES TOTAL -----------------------
     const getSubMaterialTotal = async () => {
         try {
-            const result = await ipcRenderer.invoke("get-subMaterial-total", url[2])
+            // const result = await ipcRenderer.invoke("get-subMaterial-total", url[2])
+            const result = await ipcRenderer.invoke("get-subMaterial-total", location.data.code)
             setSubMaterialTotal(JSON.parse(result))
         } catch (error) {
             console.log(error)
@@ -132,7 +152,17 @@ const ListaSubmateriales = (props) => {
         const nameSubMaterial = e.nameSubMaterial
         const saldoInicial = e.saldoInicial
         const unidadMedida = e.unidadMedida
-        history.push('/tarjetaExistencia/' + codMaterial + '/' + nameMaterial + '/' + codSubMaterial + '/' + nameSubMaterial + "/" + saldoInicial + "/" + unidadMedida)
+        history.push({
+            pathname: '/tarjetaExistencia/' + codMaterial + '/' + nameMaterial + '/' + codSubMaterial + '/' + nameSubMaterial + "/" + saldoInicial + "/" + unidadMedida,
+            data: {
+                codMaterial: codMaterial,
+                nameMaterial: nameMaterial,
+                codSubMaterial: codSubMaterial,
+                nameSubMaterial: nameSubMaterial,
+                saldoInicial: saldoInicial,
+                unidadMedida: unidadMedida
+            }
+        })
 
     }
     const irkardex = (e) => {
@@ -143,7 +173,17 @@ const ListaSubmateriales = (props) => {
         const nameSubMaterial = e.nameSubMaterial
         const saldoInicial = e.saldoInicial
         const unidadMedida = e.unidadMedida
-        history.push('/kardexValorado/' + codMaterial + '/' + nameMaterial + '/' + codSubMaterial + '/' + nameSubMaterial + "/" + saldoInicial + "/" + unidadMedida)
+        history.push({
+            pathname: '/kardexValorado/' + codMaterial + '/' + nameMaterial + '/' + codSubMaterial + '/' + nameSubMaterial + "/" + saldoInicial + "/" + unidadMedida,
+            data: {
+                codMaterial: codMaterial,
+                nameMaterial: nameMaterial,
+                codSubMaterial: codSubMaterial,
+                nameSubMaterial: nameSubMaterial,
+                saldoInicial: saldoInicial,
+                unidadMedida: unidadMedida
+            }
+        })
 
     }
     //---------------------------------------------------
@@ -171,7 +211,7 @@ const ListaSubmateriales = (props) => {
     //--------------------------------------PDF GENERATE---------------------------------
     const pdfGenerate = () => {
         // const doc = new jsPDF()
-        const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [14, 7] })
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [14, 11] })
 
         var pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth()
         var pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.height()
@@ -185,32 +225,32 @@ const ListaSubmateriales = (props) => {
         // doc.autoTable({ html: "#id-table", styles: { fontSize: 9 }, margin: { top: 35 } })
         doc.autoTable({
             headStyles: {
-                fillColor: [50 , 50, 50]
+                fillColor: [50, 50, 50]
             },
-            bodyStyles:{
-                cellPadding:0.01
+            bodyStyles: {
+                cellPadding: 0.01
             },
             head: [[
-                { content: 'N°',styles: { halign: 'center' } },
-                { content: 'Cod',styles: { halign: 'center' } },
-                { content: 'Nombre',styles: { halign: 'center' } },
-                { content: 'Unidad',styles: { halign: 'center' } },
-                { content: 'Saldo Inicial',styles: { halign: 'center' } },
-                { content: 'Saldo Actual',styles: { halign: 'center' } },
-                { content: 'Precio Total',styles: { halign: 'center' } },
-                { content: 'Precio Unitario',styles: { halign: 'center' } },
+                { content: 'N°', styles: { halign: 'center' } },
+                { content: 'Cod', styles: { halign: 'center' } },
+                { content: 'Nombre', styles: { halign: 'center' } },
+                { content: 'Unidad', styles: { halign: 'center' } },
+                { content: 'Saldo Inicial', styles: { halign: 'center' } },
+                { content: 'Saldo Actual', styles: { halign: 'center' } },
+                { content: 'Precio Total', styles: { halign: 'center' } },
+                { content: 'Precio Unitario', styles: { halign: 'center' } },
             ]],
             body: array.map((d, index) => ([
                 { content: index + 1 },
-                { content: d.codSubMaterial,styles: { halign: 'center' } },
+                { content: d.codSubMaterial, styles: { halign: 'center' } },
                 { content: d.nameSubMaterial },
-                { content: d.unidadMedida,styles: { halign: 'center' } },
+                { content: d.unidadMedida, styles: { halign: 'center' } },
                 { content: d.saldoInicial, styles: { halign: 'right' } },
                 { content: d.saldoActual, styles: { halign: 'right' } },
                 { content: d.precioTotal, styles: { halign: 'right' } },
                 { content: d.precioUnitario, styles: { halign: 'right' } },
             ])),
-            styles: { fontSize: 8, font:'courier',fontStyle:'bold' },
+            styles: { fontSize: 8, font: 'courier', fontStyle: 'bold' },
             startY: 1.3,
         })
         var pages = doc.internal.getNumberOfPages()
@@ -255,127 +295,132 @@ const ListaSubmateriales = (props) => {
         setUnidadMedida(JSON.parse(result))
 
     }
+    // const nombre=history.location.data.nameMaterial
     //----------------------------------------------
     return (
         <>
             <Typography style={{ paddingTop: '2rem', marginBottom: '1rem', color: 'white' }} align='center' variant='h5'>{url[3]}</Typography>
             <Container maxWidth='lg'>
-            <Grid container direction='row' justifyContent='space-between' alignItems='center' style={{ marginBottom: '0.5rem' }}>
-                <RegisterSubMaterial url={url} uno={getSubMaterial} />
-                <div>
-                    {array &&
-                        <TextField
-                            style={{ background: 'white', borderRadius: 5, marginRight: '1rem' }}
-                            variant='outlined'
-                            size='small'
-                            // fullWidth
-                            InputProps={{
-                                startAdornment: (
-                                    <>
-                                        <Typography variant='subtitle1' style={{ marginRight: '0.5rem' }}>Buscar</Typography>
-                                        <InputAdornment position='start'>
-                                            <SearchIcon />
-                                        </InputAdornment>
+                <Grid container direction='row' justifyContent='space-between' alignItems='center' style={{ marginBottom: '0.5rem' }}>
+                    <RegisterSubMaterial dos={url} uno={getSubMaterial} />
+                    <div>
+                        {array &&
+                            <TextField
+                                style={{ background: 'white', borderRadius: 5, marginRight: '1rem' }}
+                                variant='outlined'
+                                size='small'
+                                // fullWidth
+                                InputProps={{
+                                    startAdornment: (
+                                        <>
+                                            <Typography variant='subtitle1' style={{ marginRight: '0.5rem' }}>Buscar</Typography>
+                                            <InputAdornment position='start'>
+                                                <SearchIcon />
+                                            </InputAdornment>
 
-                                    </>
-                                )
+                                        </>
+                                    )
+                                }}
+                                onChange={e => setBuscador(e.target.value)}
+                            />
+                        }
+                        <IconButton
+                            component="span"
+                            style={{
+                                color: 'white',
+                                background: 'linear-gradient(45deg, #4caf50 30%, #8bc34a 90%)',
+                                marginRight: '0.5rem',
                             }}
-                            onChange={e => setBuscador(e.target.value)}
-                        />
-                    }
-                    <IconButton
-                        component="span"
-                        style={{
-                            color: 'white',
-                            background: 'linear-gradient(45deg, #4caf50 30%, #8bc34a 90%)',
-                            marginRight: '0.5rem',
-                        }}
-                        onClick={pdfGenerate}>
-                        <Tooltip title='imprimir'>
-                            <PrintIcon />
-                        </Tooltip>
-                    </IconButton>
-                    <IconButton
-                        style={{
-                            color: 'white',
-                            background: 'linear-gradient(45deg, #0277bd 30%, #82b1ff 90%)',
-                            marginRight: '0.5rem',
-                        }}
-                        component={Link}
-                        to="/listaProduct">
-                        <Tooltip title='atras'>
-                            <ArrowBackIcon />
-                        </Tooltip>
-                    </IconButton>
-                </div>
+                            onClick={pdfGenerate}>
+                            <Tooltip title='imprimir'>
+                                <PrintIcon />
+                            </Tooltip>
+                        </IconButton>
+                        <IconButton
+                            style={{
+                                color: 'white',
+                                background: 'linear-gradient(45deg, #0277bd 30%, #82b1ff 90%)',
+                                marginRight: '0.5rem',
+                            }}
+                            component={Link}
+                            to="/listaProduct">
+                            <Tooltip title='atras'>
+                                <ArrowBackIcon />
+                            </Tooltip>
+                        </IconButton>
+                    </div>
 
-            </Grid>
-            <Paper component={Box} p={0.3}>
-                <TableContainer style={{ maxHeight: 550 }}>
-                    <Table id='id-table' style={{ minWidth: 1000 }} stickyHeader size='small'>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell style={{ color: 'white', backgroundColor: "black" }}>{url[2]}</TableCell>
-                                <TableCell style={{ color: 'white', backgroundColor: "black" }}>Nombre</TableCell>
-                                <TableCell style={{ color: 'white', backgroundColor: "black" }}>Unidad</TableCell>
-                                <TableCell style={{ color: 'white', backgroundColor: "black" }}>Saldo Inicial</TableCell>
-                                <TableCell style={{ color: 'white', backgroundColor: "black" }}>Saldo Actual</TableCell>
-                                <TableCell style={{ color: 'white', backgroundColor: "black" }}>Precio Total</TableCell>
-                                <TableCell style={{ color: 'white', backgroundColor: "black" }}>Precio Unitario</TableCell>
-                                <TableCell id='desaparecer1' style={{ color: 'white', backgroundColor: "black" }}>Tarjeta/Kardex</TableCell>
-                                <TableCell id='desaparecer2' style={{ color: 'white', backgroundColor: "black" }}>Acciones</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {array.length > 0 ? (
-                                array.filter(buscarSubMaterial(buscador)).map(s => (
-                                    <TableRow key={s._id}>
-                                        <TableCell>{s.codSubMaterial}</TableCell>
-                                        <TableCell>{s.nameSubMaterial}</TableCell>
-                                        <TableCell>{s.unidadMedida}</TableCell>
-                                        <TableCell align='right'>{s.saldoInicial}</TableCell>
-                                        <TableCell align='right'>{s.saldoActual}</TableCell>
-                                        <TableCell align='right'>{s.precioTotal}</TableCell>
-                                        <TableCell align='right'>{s.precioUnitario}</TableCell>
-                                        <TableCell>
-                                            <Grid container justifyContent='space-evenly'>
-                                                <Tooltip title='edit'>
-                                                    <IconButton size='small' style={{ color: 'green' }} onClick={() => openModalImage(s)}>
-                                                        <ImageIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title='tarjeta'>
-                                                    <IconButton size='small' onClick={() => irTarjeta(s)}>
-                                                        <InfoIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title='kardex' >
-                                                    <IconButton size='small' onClick={() => irkardex(s)}>
-                                                        <CreditCardIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            </Grid>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Grid container justifyContent='space-evenly'>
-                                                <Tooltip title='delete'>
-                                                    <IconButton size='small' style={{ color: 'red' }} onClick={() => openModalImageDelete(s)}>
-                                                        <DeleteIcon />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            </Grid>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
+                </Grid>
+                <Paper component={Box} p={0.3}>
+                    <TableContainer style={{ maxHeight: 450 }}>
+                        <Table id='id-table' style={{ minWidth: 1000 }} stickyHeader size='small'>
+                            <TableHead>
                                 <TableRow>
-                                    <TableCell colSpan='8' align='center'>no existe informacion</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black" }}>{url[2]}</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black" }}>Nombre</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black" }}>Unidad</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black" }}>Saldo Inicial</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black" }}>Saldo Actual</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black" }}>Precio Total</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black" }}>Precio Unitario</TableCell>
+                                    <TableCell id='desaparecer1' style={{ color: 'white', backgroundColor: "black" }}>Tarjeta/Kardex</TableCell>
+                                    <TableCell id='desaparecer2' style={{ color: 'white', backgroundColor: "black" }}>Acciones</TableCell>
                                 </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
+                            </TableHead>
+                            <TableBody>
+                                {array.length > 0 ? (
+                                    array.filter(buscarSubMaterial(buscador)).map(s => (
+                                        <TableRow key={s._id} className={classes.tableRow}>
+                                            <TableCell>{s.codSubMaterial}</TableCell>
+                                            <TableCell>{s.nameSubMaterial}</TableCell>
+                                            <TableCell>{s.unidadMedida}</TableCell>
+                                            <TableCell align='right'>{s.saldoInicial}</TableCell>
+                                            <TableCell align='right'>{s.saldoActual}</TableCell>
+                                            <TableCell align='right'>{s.precioTotal}</TableCell>
+                                            <TableCell align='right'>{s.precioUnitario}</TableCell>
+                                            <TableCell style={{ padding: 0, margin: 0 }}>
+                                                <Grid container justifyContent='space-evenly'>
+                                                    <Tooltip title='edit'>
+                                                        <IconButton size='small' style={{ color: 'green' }} onClick={() => openModalImage(s)}>
+                                                            <ImageIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title='tarjeta'>
+                                                        <IconButton size='small' onClick={() => irTarjeta(s)}>
+                                                            <InfoIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title='kardex' >
+                                                        <IconButton size='small' onClick={() => irkardex(s)}>
+                                                            <CreditCardIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Grid>
+                                            </TableCell>
+                                            <TableCell style={{ padding: 0, margin: 0 }}>
+                                                <Grid container justifyContent='space-evenly'>
+                                                    <Tooltip title='delete'>
+                                                        <IconButton size='small' style={{ color: 'red' }} onClick={() => openModalImageDelete(s)}>
+                                                            <DeleteIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Grid>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell align='center' colSpan='8' style={{ display: progress }}>
+                                            <CircularProgress />
+                                            {/* <LinearProgress /> */}
+                                        </TableCell>
+                                        <TableCell style={{ display: exist }} colSpan='8' align='center'>no existen datos</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Paper>
             </Container>
             {/* ------------------------------------------------------------------*/}
             <Dialog

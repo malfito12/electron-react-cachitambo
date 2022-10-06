@@ -1,7 +1,8 @@
-import { Container, TextField, Grid, makeStyles, Typography, Button, MenuItem } from '@material-ui/core'
+import { Container, TextField, Grid, makeStyles, Typography, Button, MenuItem, IconButton, Paper } from '@material-ui/core'
 import React, { useEffect } from 'react'
 import { useState } from 'react'
 import SaveIcon from '@material-ui/icons/Save';
+import SearchIcon from '@material-ui/icons/Search';
 import { ErrorRegisterSalidaMat, SuccessRegisterSalidaMat } from '../../Atoms/Alerts/Alerts';
 
 const ipcRenderer = window.require('electron').ipcRenderer
@@ -19,6 +20,7 @@ const SalidaMateriales = () => {
     const classes = useStyles()
     const [material, setMaterial] = useState([])
     const [subMaterial, setSubMaterial] = useState([])
+    const [subMaterialCantidad, setSubMaterialCantidad] = useState([])
     const [unidadMedida, setUnidadMedida] = useState([])
     const [openAlertRegisterMatSuccess, setOpenAlertRegisterMatSuccess] = useState(false)
     const [openAlertRegisterMatError, setOpenAlertRegisterMatError] = useState(false)
@@ -32,7 +34,9 @@ const SalidaMateriales = () => {
         procedenciaDestino: '',
         unidadMedida: '',
         registerDate: '',
-        numVale: ''
+        numVale: '',
+        codMaterial: '',
+        codSubMaterial: '',
     })
 
     useEffect(() => {
@@ -67,19 +71,19 @@ const SalidaMateriales = () => {
             const result = await ipcRenderer.invoke("post-salidas", data)
             console.log(JSON.parse(result))
             openCloseAlertRegisterMatSuccess()
-            setTimeout(()=>setOpenAlertRegisterMatSuccess(false),4000)
+            setTimeout(() => setOpenAlertRegisterMatSuccess(false), 4000)
             document.getElementById('nameMaterial').value = ""
             document.getElementById('nameSubMaterial').value = ""
             document.getElementById('cantidadF').value = ""
             document.getElementById('precio').value = ""
             document.getElementById('precioUnitario').value = ""
             document.getElementById('procedenciaDestino').value = ""
-            document.getElementById('unidadMedida').value = ""
+            document.getElementById('numVale').value = ""
             document.getElementById('registerDate').value = ""
         } catch (error) {
             console.log(error)
             openCloseAlertRegisterMatError()
-            setTimeout(()=>setOpenAlertRegisterMatError(false),4000)
+            setTimeout(() => setOpenAlertRegisterMatError(false), 4000)
         }
         // console.log(data)
     }
@@ -87,7 +91,10 @@ const SalidaMateriales = () => {
     const getMaterial = async () => {
         try {
             const result = await ipcRenderer.invoke("get-material")
-            setMaterial(JSON.parse(result))
+                .then(resp => {
+                    setMaterial(JSON.parse(resp))
+                })
+            // setMaterial(JSON.parse(result))
         } catch (error) {
             console.log(error)
         }
@@ -96,15 +103,66 @@ const SalidaMateriales = () => {
     const getSubMaterial = async (e) => {
         try {
             const result = await ipcRenderer.invoke('get-submaterial', e)
-            setSubMaterial(JSON.parse(result))
+                .then(resp => {
+                    setSubMaterial(JSON.parse(resp))
+                })
+            // setSubMaterial(JSON.parse(result))
+        } catch (error) {
+            console.log(error)
+        }
+    }
+    const getCantidad = async (e) => {
+        await ipcRenderer.invoke('get-cantidad-subMaterial', e)
+            .then(resp => {
+                setSubMaterialCantidad(JSON.parse(resp))
+            })
+            .catch(err => console.log(err))
+    }
+    var cantidad = 0
+    if (subMaterialCantidad.length > 0) {
+        for (var i = 0; i < subMaterialCantidad.length; i++) {
+            if (subMaterialCantidad[i].typeRegister === 'entrada') {
+                cantidad = cantidad + parseFloat(subMaterialCantidad[i].cantidadF)
+            } else {
+                cantidad = cantidad - parseFloat(subMaterialCantidad[i].cantidadS)
+            }
+        }
+    }
+    // console.log(subMaterial)
+    //-----------------------GET MATERIAL ESPECIFICO------------------------
+    const getSpecificMaterial = async () => {
+        const data = changeData.codMaterial
+        try {
+            const result = await ipcRenderer.invoke('get-specific-material', data)
+                .then(resp => {
+                    const aux = JSON.parse(resp)
+                    const lala = { target: { name: 'nameMaterial', value: aux[0].codMaterial + '/' + aux[0].nameMaterial } }
+                    handleChange(lala)
+                })
+        } catch (error) {
+            console.log(error)
+        }
+    }
+    //----------------------GET SUB MATERIAL SPECIFICO--------------------------
+    const getSpecificSubMaterial = async () => {
+        const data = changeData.codSubMaterial
+        try {
+            const result = await ipcRenderer.invoke('get-specific-sub-material', data)
+                .then(resp => {
+                    // console.log(JSON.parse(resp))
+                    const aux = JSON.parse(resp)
+                    const lala = { target: { name: 'nameSubMaterial', value: aux[0].codSubMaterial + '/' + aux[0].nameSubMaterial } }
+                    handleChange(lala)
+                })
         } catch (error) {
             console.log(error)
         }
     }
     //--------------------------GET UNIDAD DE MEDIDA-----------------------------
-    const getUnidadMedida = async () => {
+    const getUnidadMedida = async (e) => {
         try {
-            const result = await ipcRenderer.invoke('get-unidadMedida')
+            // const result = await ipcRenderer.invoke('get-unidadMedida')
+            const result = await ipcRenderer.invoke('get-um', e)
             setUnidadMedida(JSON.parse(result))
         } catch (error) {
             console.log(error)
@@ -116,6 +174,12 @@ const SalidaMateriales = () => {
             var aux = e.target.value
             aux = aux.split("/")
             getSubMaterial(aux[0])
+        }
+        if (e.target.name === 'nameSubMaterial') {
+            var aux = e.target.value
+            aux = aux.split("/")
+            getUnidadMedida(aux[0])
+            getCantidad(aux[0])
         }
         setChangeData({
             ...changeData,
@@ -155,6 +219,24 @@ const SalidaMateriales = () => {
                                 required
                             />
                             <TextField
+                                name='codMaterial'
+                                label='Codigo de Material'
+                                variant='outlined'
+                                fullWidth
+                                size='small'
+                                // value={changeData.codMaterial}
+                                className={classes.spacingBot}
+                                style={{ background: 'white', borderRadius: 5 }}
+                                onChange={handleChange}
+                                InputProps={{
+                                    endAdornment: (
+                                        <IconButton size='small' onClick={getSpecificMaterial} component='span' style={{ color: 'white', background: '#2979ff' }}>
+                                            <SearchIcon />
+                                        </IconButton>
+                                    )
+                                }}
+                            />
+                            <TextField
                                 id='nameMaterial'
                                 name='nameMaterial'
                                 label='Tipo de Material'
@@ -172,6 +254,23 @@ const SalidaMateriales = () => {
                                     <MenuItem key={index} value={`${e.codMaterial}/${e.nameMaterial}`}>{e.nameMaterial}</MenuItem>
                                 ))}
                             </TextField>
+                            <TextField
+                                name='codSubMaterial'
+                                label='Codigo Sub Material'
+                                variant='outlined'
+                                fullWidth
+                                size='small'
+                                className={classes.spacingBot}
+                                style={{ background: 'white', borderRadius: 5 }}
+                                onChange={handleChange}
+                                InputProps={{
+                                    endAdornment: (
+                                        <IconButton size='small' onClick={getSpecificSubMaterial} component='span' style={{ color: 'white', background: '#2979ff' }}>
+                                            <SearchIcon />
+                                        </IconButton>
+                                    )
+                                }}
+                            />
                             <TextField
                                 id='nameSubMaterial'
                                 name='nameSubMaterial'
@@ -204,6 +303,8 @@ const SalidaMateriales = () => {
                                 style={{ background: 'white', borderRadius: 5 }}
                                 required
                             />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
                             <TextField
                                 id='precio'
                                 name='precio'
@@ -218,8 +319,6 @@ const SalidaMateriales = () => {
                                 style={{ background: 'white', borderRadius: 5 }}
                                 required
                             />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
                             <TextField
                                 id='precioUnitario'
                                 name='precioUnitario'
@@ -254,15 +353,16 @@ const SalidaMateriales = () => {
                                 className={classes.spacingBot}
                                 fullWidth
                                 size='small'
-                                onChange={handleChange}
-                                select
-                                value={changeData.unidadMedida}
+                                // onChange={handleChange}
+                                // select
+                                // value={changeData.unidadMedida}
+                                value={unidadMedida.length > 0 ? unidadMedida[0].unidadMedida : ''}
                                 style={{ background: 'white', borderRadius: 5 }}
                                 required
                             >
-                                {unidadMedida && unidadMedida.map((u, index) => (
+                                {/* {unidadMedida && unidadMedida.map((u, index) => (
                                     <MenuItem key={index} value={u.nameUnidadMedida}>{u.nameUnidadMedida}</MenuItem>
-                                ))}
+                                ))} */}
                             </TextField>
                             <TextField
                                 id='registerDate'
@@ -278,6 +378,9 @@ const SalidaMateriales = () => {
                                 style={{ background: 'white', borderRadius: 5 }}
                                 required
                             />
+                            <Paper style={{ background: 'white', borderRadius: 5, padding: 7 }}>
+                                <Typography>Cantidad Actual: {cantidad}</Typography>
+                            </Paper>
                         </Grid>
                     </Grid>
                     <Grid container justifyContent='space-evenly' style={{ marginTop: '2rem' }}>

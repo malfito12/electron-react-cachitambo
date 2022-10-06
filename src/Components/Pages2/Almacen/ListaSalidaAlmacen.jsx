@@ -1,4 +1,4 @@
-import { makeStyles, Paper, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Grid, TextField, InputAdornment, IconButton, Tooltip, Container } from '@material-ui/core'
+import { makeStyles, Paper, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Grid, TextField, InputAdornment, IconButton, Tooltip, Container, CircularProgress } from '@material-ui/core'
 import React from 'react'
 import { useEffect } from 'react'
 import { useState } from 'react'
@@ -21,11 +21,18 @@ const useStyles = makeStyles((theme) => ({
         align: 'center',
         fontSize: 'small',
         padding: 0,
+    },
+    tableRow: {
+        "&:hover": {
+            backgroundColor: "#bbdefb"
+        }
     }
 }))
 const ListaSalidaAlmacen = () => {
     const classes = useStyles()
     const [salidaAlmacen, setSalidaAlmacen] = useState([])
+    const [progress, setProgress] = useState('none')
+    const [exist, setExist] = useState('none')
 
     useEffect(() => {
         getSalidaAlmacen()
@@ -33,9 +40,17 @@ const ListaSalidaAlmacen = () => {
 
     //---------------GET SALIDA ALMACEN------------------------
     const getSalidaAlmacen = async () => {
+        setProgress('block')
         try {
             const result = await ipcRenderer.invoke("get-salidaAlmacen")
-            setSalidaAlmacen(JSON.parse(result))
+            .then(resp=>{
+                if (JSON.parse(resp.length) === 0) {
+                    setExist('block')
+                }
+                setProgress('none')
+                setSalidaAlmacen(JSON.parse(resp))
+                // setSalidaAlmacen(JSON.parse(result))
+            })
         } catch (error) {
             console.log(error)
         }
@@ -58,7 +73,7 @@ const ListaSalidaAlmacen = () => {
     }
     //--------------------------------------PDF GENERATE---------------------------------
     const pdfGenerate = () => {
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: [11, 7] })
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'in', format: [11, 11] })
         var pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth()
         var pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.height()
         doc.setFontSize(14)
@@ -164,7 +179,7 @@ const ListaSalidaAlmacen = () => {
                     </div>
                 </Grid>
                 <Paper component={Box} p={0.3}>
-                    <TableContainer style={{ maxHeight: 550 }}>
+                    <TableContainer style={{ maxHeight: 450 }}>
                         <Table id='id-table' stickyHeader size='small'>
                             <TableHead>
                                 <TableRow>
@@ -187,7 +202,7 @@ const ListaSalidaAlmacen = () => {
                             <TableBody>
                                 {salidaAlmacen.length > 0 ? (
                                     salidaAlmacen.filter(buscarMaterialSalidas(buscador)).map((s, index) => (
-                                        <TableRow key={index}>
+                                        <TableRow key={index} className={classes.tableRow}>
                                             <TableCell>{index + 1}</TableCell>
                                             <TableCell align='right'>{s.cantidadS}</TableCell>
                                             <TableCell align='center'>{s.unidadMedida}</TableCell>
@@ -199,7 +214,11 @@ const ListaSalidaAlmacen = () => {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell></TableCell>
+                                        <TableCell align='center'colSpan='10' style={{ display: progress }}>
+                                            <CircularProgress />
+                                            {/* <LinearProgress /> */}
+                                        </TableCell>
+                                        <TableCell style={{ display: exist }} colSpan='10' align='center'>no existen datos</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>

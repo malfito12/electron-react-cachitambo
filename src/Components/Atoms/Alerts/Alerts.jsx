@@ -1,12 +1,12 @@
 import React from 'react'
 import Alert from '@material-ui/lab/Alert';
-import { Collapse, IconButton, Snackbar } from '@material-ui/core';
+import { Collapse, Snackbar } from '@material-ui/core';
 
 export const ErrorPrintIngresoMat = (props) => {
     return (
         <Collapse in={props.open} >
             <Alert variant="filled" severity="error" onClose={props.setOpen}>
-                Error, antes de imprimir inserte datos, no sea idiota !
+                Error, antes de imprimir inserte datos, no sea idiota!
             </Alert>
         </Collapse>
     )
@@ -15,7 +15,16 @@ export const ErrorRegisterIngresoMat = (props) => {
     return (
         <Collapse in={props.open} >
             <Alert variant="filled" severity="error" onClose={props.setOpen}>
-                Error, No se puede hacer el registro !
+                Error, No se puede hacer el registro, inserte datos !
+            </Alert>
+        </Collapse>
+    )
+}
+export const ErrorDuplicidad = (props) => {
+    return (
+        <Collapse in={props.open} >
+            <Alert variant="filled" severity="error" onClose={props.setOpen}>
+                Error, La informacion ya fué registrada, por favor elimine los datos para un nuevo registro !
             </Alert>
         </Collapse>
     )

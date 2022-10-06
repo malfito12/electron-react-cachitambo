@@ -15,7 +15,6 @@ import TarjetaExistencia from '../Pages2/Vistas/TarjetaExistencia';
 import KardexValorado from '../Pages2/Vistas/KardexValorado';
 import ListaIngresoAlmacen from '../Pages2/Almacen/ListaIngresoAlmacen';
 import ListaSalidaAlmacen from '../Pages2/Almacen/ListaSalidaAlmacen';
-import MainAppBar from './MainAppBar';
 
 const useStyles = makeStyles((theme) => ({
     drawerPaper: {
@@ -62,12 +61,12 @@ const NewDrawer = (props) => {
                 </div>
                 <Divider />
                 <List component='nav'>
-                    {/* <ListItem button component={Link} to='/' style={{ color: 'yellowgreen' }}>
+                    <ListItem button component={Link} to='/' style={{ color: 'yellowgreen' }}>
                         <ListItemIcon >
                             <ArrowRightAltIcon style={{ color: 'white' }} />
                         </ListItemIcon>
                         <ListItemText>Inicio</ListItemText>
-                    </ListItem> */}
+                    </ListItem>
                     <ListItem button component={Link} to='/listaProduct' style={{ color: 'yellowgreen' }}>
                         <ListItemIcon>
                             <ArrowRightAltIcon style={{ color: 'white' }} />
@@ -80,12 +79,12 @@ const NewDrawer = (props) => {
                         </ListItemIcon>
                         <ListItemText>Ingreso de Materiales</ListItemText>
                     </ListItem>
-                    <ListItem button component={Link} to='/salidaMateriales' style={{ color: 'yellowgreen' }}>
+                    {/* <ListItem button component={Link} to='/salidaMateriales' style={{ color: 'yellowgreen' }}>
                         <ListItemIcon>
                             <ArrowRightAltIcon style={{ color: 'white' }} />
                         </ListItemIcon>
                         <ListItemText>Salida de Materiales</ListItemText>
-                    </ListItem>
+                    </ListItem> */}
                     <ListItem button component={Link} to='/listaAlmacen' style={{ color: 'yellowgreen' }}>
                         <ListItemIcon>
                             <ArrowRightAltIcon style={{ color: 'white' }} />
@@ -101,11 +100,11 @@ const NewDrawer = (props) => {
                 </List>
             </Drawer>
             <Main open={props.openDrawer}>
-                {/* <Route path='/' exact component={Home}/> */}
+                <Route path='/' exact component={Home}/>
                 <Route path='/listaProduct' exact component={ListaProduct} />
                 <Route path='/listaSubmateriales/:id'  component={ListaSubmateriales} />
                 <Route path='/ingresoMateriales' exact component={IngresoMateriales} />
-                <Route path='/salidaMateriales' exact component={SalidaMateriales} />
+                {/* <Route path='/salidaMateriales' exact component={SalidaMateriales} /> */}
                 <Route path='/tarjetaExistencia/:id' component={TarjetaExistencia} />
                 <Route path='/kardexValorado/:id' component={KardexValorado} />
                 <Route path='/listaAlmacen' exact component={ListaAlmacen} />

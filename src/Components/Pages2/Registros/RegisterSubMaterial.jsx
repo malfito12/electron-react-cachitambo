@@ -12,6 +12,7 @@ const useStyles = makeStyles((theme) => ({
     }
 }))
 const RegisterSubMaterial = (props) => {
+    // console.log(props.dos)
     const classes = useStyles()
     const [image, setImage] = useState(null)
     const [preview, setPreview] = useState(null)
@@ -19,8 +20,8 @@ const RegisterSubMaterial = (props) => {
     const [unidadMedida, setUnidadMedida] = useState([])
     const [changeData, setChangeData] = useState({
         nameSubMaterial: '',
-        nameMaterial: props.url[3],
-        codMaterial: props.url[2],
+        nameMaterial: props.dos[3],
+        codMaterial: props.dos[2],
         unidadMedida: '',
         image: ''
     })
