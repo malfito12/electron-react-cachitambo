@@ -83,3 +83,21 @@ export const ErrorAlertsMateriales = (props) => {
 
 
 // ------------------SUB- MATERIALES------------------------
+export const SuccessAlertsSalidas = (props) => {
+    return (
+        <Snackbar open={props.open} autoHideDuration={3000} onClose={props.setOpen}>
+            <Alert variant="filled" severity="success" onClose={props.setOpen}>
+                Success, La acción de realizó correctamente.
+            </Alert>
+        </Snackbar>
+    )
+}
+export const ErrorAlertsSalidas = (props) => {
+    return (
+        <Snackbar open={props.open} autoHideDuration={3000} onClose={props.setOpen}>
+            <Alert variant="filled" severity="error" onClose={props.setOpen}>
+                Error, Cantidad o Precio mayor al que se tiene
+            </Alert>
+        </Snackbar>
+    )
+}

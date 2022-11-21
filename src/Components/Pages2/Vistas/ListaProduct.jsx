@@ -227,7 +227,7 @@ const ListaProduct = (props) => {
     return (
         <>
             <Typography style={{ paddingTop: '2rem', marginBottom: '1rem', color: 'white' }} variant='h5' align='center' >Lista de Productos</Typography>
-            <Container maxWidth='lg'>
+            <Container maxWidth={false}>
                 <Grid container direction='row' justifyContent='space-between' alignItems='center' style={{ marginBottom: '0.5rem' }}>
                     <RegisterMaterial uno={getMateriales} />
                     <div>

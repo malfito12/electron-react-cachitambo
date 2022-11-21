@@ -12,7 +12,6 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import SearchIcon from '@material-ui/icons/Search';
 import { ErrorDuplicidad, ErrorPrintIngresoMat, ErrorRegisterIngresoMat, SuccessRegisterIngresoMat } from '../../Atoms/Alerts/Alerts'
 
-
 const ipcRenderer = window.require('electron').ipcRenderer
 const useStyles = makeStyles((theme) => ({
     spacingBot: {
@@ -121,7 +120,7 @@ const IngresoMateriales = () => {
             const result = await ipcRenderer.invoke('get-specific-material', data)
                 .then(resp => {
                     const aux = JSON.parse(resp)
-                    const lala = { target: { name: 'nameMaterial', value: aux[0].codMaterial + '/' + aux[0].nameMaterial } }
+                    const lala = { target: { name: 'nameMaterial', value: aux[0].codMaterial + '#' + aux[0].nameMaterial } }
                     handleChange(lala)
                 })
         } catch (error) {
@@ -136,7 +135,7 @@ const IngresoMateriales = () => {
                 .then(resp => {
                     // console.log(JSON.parse(resp))
                     const aux = JSON.parse(resp)
-                    const lala = { target: { name: 'nameSubMaterial', value: aux[0].codSubMaterial + '/' + aux[0].nameSubMaterial } }
+                    const lala = { target: { name: 'nameSubMaterial', value: aux[0].codSubMaterial + '#' + aux[0].nameSubMaterial } }
                     handleChange(lala)
                 })
         } catch (error) {
@@ -168,18 +167,22 @@ const IngresoMateriales = () => {
     var dos;
     const introducir = (e) => {
         e.preventDefault()
+
         // console.log(changeData)
         // sum=sum+changeData.precio
         setSum(sum + parseFloat(changeData.precio))
         var aux = changeData.nameSubMaterial
         var aux2 = changeData.nameMaterial
-        aux = aux.split("/")
-        aux2 = aux2.split("/")
+        aux = aux.split("#")
+        aux2 = aux2.split("#")
         var fecha = changeData.registerDate
         var change = fecha.split('-')
         var newFecha = change[2] + '-' + change[1] + '-' + change[0]
         const nuevo = { nameSubMaterial: aux[1], codSubMaterial: aux[0], nameMaterial: aux2[1], codMaterial: aux2[0] }
-        dos = { ...changeData, ...nuevo, id: uuidv4(), registerDate: newFecha,idAlmacen:uuidv4() }
+        const precioUnitario = parseFloat(changeData.precio) / parseFloat(changeData.cantidadF)
+        var roundedNum = (Math.round(precioUnitario * 100) / 100).toFixed(2);
+        // dos = { ...changeData, ...nuevo, id: uuidv4(), registerDate: newFecha,idAlmacen:uuidv4(),precioUnitario:roundedNum }
+        dos = { ...changeData, ...nuevo, id: uuidv4(), registerDate: newFecha, idAlmacen: uuidv4() }
         // console.log(dos)
 
         setUno([...uno, dos])
@@ -238,12 +241,12 @@ const IngresoMateriales = () => {
         // console.log(e)
         if (e.target.name === 'nameMaterial') {
             var aux = e.target.value
-            aux = aux.split("/")
+            aux = aux.split("#")
             getSubMaterial(aux[0])
         }
         if (e.target.name === 'nameSubMaterial') {
             var aux = e.target.value
-            aux = aux.split("/")
+            aux = aux.split("#")
             getUnidad(aux[0])
         }
         setChageData({
@@ -446,7 +449,7 @@ const IngresoMateriales = () => {
                                 required
                             >
                                 {material && material.map((m, index) => (
-                                    <MenuItem key={m._id} value={`${m.codMaterial}/${m.nameMaterial}`} >{m.nameMaterial}</MenuItem>
+                                    <MenuItem key={m._id} value={`${m.codMaterial}#${m.nameMaterial}`} >{m.nameMaterial}</MenuItem>
                                 ))}
                             </TextField>
                             <TextField
@@ -480,7 +483,7 @@ const IngresoMateriales = () => {
                                 required
                             >
                                 {subMaterial && subMaterial.map((m, index) => (
-                                    <MenuItem key={m._id} value={`${m.codSubMaterial}/${m.nameSubMaterial}`}>{m.nameSubMaterial}</MenuItem>
+                                    <MenuItem key={m._id} value={`${m.codSubMaterial}#${m.nameSubMaterial}`}>{m.nameSubMaterial}</MenuItem>
                                 ))}
                             </TextField>
                             <TextField

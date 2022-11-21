@@ -17,7 +17,7 @@ import { ErrorAlertsMateriales, SuccessAlertsMateriales } from '../../Atoms/Aler
 const ipcRenderer = window.require('electron').ipcRenderer
 const useStyles = makeStyles((theme) => ({
     spacingBot: {
-        marginBottom: '1rem'
+        marginBottom: '0.5rem'
     },
     spacingPaper: {
         marginBottom: '1rem',
@@ -31,6 +31,9 @@ const useStyles = makeStyles((theme) => ({
     tableCellspcing: {
         paddingTop: 0,
         paddingBottom: 0
+    },
+    tableCellBody: {
+        // fontSize: 'small',
     }
 }))
 const ListaAlmacen = () => {
@@ -48,6 +51,8 @@ const ListaAlmacen = () => {
     const [changeData, setChangeData] = useState({
         // _id:'',
         cantidad: '',
+        numVale: '',
+        numeroIngreso: '',
         nameMaterial: '',
         nameSubMaterial: '',
         precio: '',
@@ -123,6 +128,7 @@ const ListaAlmacen = () => {
                 { content: 'Cod. Movimiento', styles: { halign: 'center' } },
                 { content: 'Descripción', styles: { halign: 'center' } },
                 { content: 'Cantidad', styles: { halign: 'center' } },
+                { content: 'Precio Unitario', styles: { halign: 'center' } },
                 { content: 'Precio', styles: { halign: 'center' } },
                 { content: 'Unidad Medida', styles: { halign: 'center' } },
                 { content: 'Cod-Kardex', styles: { halign: 'center' } },
@@ -134,6 +140,7 @@ const ListaAlmacen = () => {
                 { content: d.numVale ? d.numVale : "", styles: { halign: 'center' } },
                 { content: d.nameSubMaterial ? d.nameSubMaterial : "" },
                 { content: d.cantidad ? d.cantidad : "", styles: { halign: 'right' } },
+                { content: d.precioUnitario ? d.precioUnitario : "", styles: { halign: 'right' } },
                 { content: d.precio ? d.precio : "", styles: { halign: 'right' } },
                 { content: d.unidadMedida ? d.unidadMedida : "", styles: { halign: 'center' } },
                 { content: d.codSubMaterial ? d.codSubMaterial : "", styles: { halign: 'center' } },
@@ -154,9 +161,10 @@ const ListaAlmacen = () => {
     }
     //-----------------------EDIT SUB-MATERIAL------------------------
     const openModalEdit = (e) => {
+        // console.log(e)
         var date = e.registerDate.split("-")
         var fecha = date[2] + '-' + date[1] + '-' + date[0]
-        setChangeData({...e,registerDate: fecha})
+        setChangeData({ ...e, registerDate: fecha })
         setOpenEdit(true)
     }
     const closeModalEdit = () => {
@@ -221,18 +229,18 @@ const ListaAlmacen = () => {
     //-----------------------------------------------------------------
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
-      };
-      const handleChangeRowsPerPage = (event) => {
+    };
+    const handleChangeRowsPerPage = (event) => {
         setRowsPerPage(event.target.value);
         setPage(0);
-      };
+    };
     //-------------------------------------------------------
     //-------------------------------------------------------
     // console.log(almacen)
     // console.log(changeData)
     return (
         <>
-            <Typography style={{ paddingTop: '2rem', marginBottom: '1rem', color: 'white' }} align='center' variant='h6'>ALMACEN</Typography>
+            <Typography style={{ paddingTop: '1.5rem', color: 'white' }} align='center' variant='h6'>ALMACEN</Typography>
             <div align='center' className={classes.spacingBot}>
                 <Button
                     startIcon={<ArrowBackIcon />}
@@ -296,17 +304,18 @@ const ListaAlmacen = () => {
                 </Grid>
                 {/* ------------------------------------------------------------------------- */}
                 <Paper component={Box} p={0.3}>
-                    <TableContainer style={{ maxHeight: 450 }}>
-                        <Table id='id-table' stickyHeader size='small'>
+                    <TableContainer style={{ maxHeight: 430 }}>
+                        <Table id='id-table' stickyHeader size='small' style={{ minWidth: 1000 }} >
                             <TableHead>
                                 <TableRow>
-                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '15%' }}>Fecha</TableCell>
-                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '5%' }}>Tipo de Registro</TableCell>
-                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '10%' }}>Cod. Movimiento</TableCell>
-                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '30%' }}>Descripcion</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '11%' }}>Fecha</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '3%' }}>Tipo de Registro</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '3%' }}>Cod. Movimiento</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '37%' }}>Descripcion</TableCell>
                                     <TableCell style={{ color: 'white', backgroundColor: "black", width: '5%' }}>Cantidad</TableCell>
-                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '10%' }}>Precio</TableCell>
-                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '5%' }}>Unidad de Medida</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '5%' }}>Precio Unitario</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '5%' }}>Precio</TableCell>
+                                    <TableCell style={{ color: 'white', backgroundColor: "black", width: '10%' }}>Unidad de Medida</TableCell>
                                     <TableCell style={{ color: 'white', backgroundColor: "black", width: '10%' }}>Kardex</TableCell>
                                     <TableCell id='desaparecer' style={{ color: 'white', backgroundColor: "black", width: '10%' }}></TableCell>
                                     {/* <TableCell style={{ color: 'white', backgroundColor: "black" }}>Precio Bs</TableCell> */}
@@ -315,20 +324,21 @@ const ListaAlmacen = () => {
                             <TableBody>
                                 {almacen.length > 0 ? (
                                     almacen.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).filter(buscarMaterialAlmacen(buscador)).map((a, index) => (
-                                    // almacen.filter(buscarMaterialAlmacen(buscador)).map((a, index) => (
+                                        // almacen.filter(buscarMaterialAlmacen(buscador)).map((a, index) => (
                                         <TableRow key={index} className={classes.tableRow}>
-                                            <TableCell>{a.registerDate}</TableCell>
-                                            <TableCell >{a.typeRegister}</TableCell>
+                                            <TableCell className={classes.tableCellBody}>{a.registerDate}</TableCell>
+                                            <TableCell className={classes.tableCellBody}>{a.typeRegister}</TableCell>
                                             {a.typeRegister == 'salida' ? (
-                                                <TableCell className={classes.tableCellspcing}>{a.numVale}</TableCell>
+                                                <TableCell className={{ ...classes.tableCellspcing, ...classes.tableCellBody }}>{a.numVale}</TableCell>
                                             ) : (
-                                                <TableCell className={classes.tableCellspcing}></TableCell>
+                                                <TableCell className={{ ...classes.tableCellspcing, ...classes.tableCellBody }}>{a.numeroIngreso}</TableCell>
                                             )}
-                                            <TableCell >{a.nameSubMaterial}</TableCell>
-                                            <TableCell >{a.cantidad}</TableCell>
-                                            <TableCell >{a.precio}</TableCell>
-                                            <TableCell >{a.unidadMedida}</TableCell>
-                                            <TableCell >{a.codSubMaterial}</TableCell>
+                                            <TableCell className={classes.tableCellBody}>{a.nameSubMaterial}</TableCell>
+                                            <TableCell align='right' className={classes.tableCellBody}>{a.cantidad}</TableCell>
+                                            <TableCell align='right' className={classes.tableCellBody}>{a.precioUnitario}</TableCell>
+                                            <TableCell align='right' className={classes.tableCellBody}>{a.precio}</TableCell>
+                                            <TableCell className={classes.tableCellBody}>{a.unidadMedida}</TableCell>
+                                            <TableCell className={classes.tableCellBody}>{a.codSubMaterial}</TableCell>
                                             <TableCell style={{ padding: 0, margin: 0 }}>
                                                 <Grid container direction='row' justifyContent='space-evenly'>
                                                     <Tooltip title='edit'>
@@ -361,7 +371,7 @@ const ListaAlmacen = () => {
                         </Table>
                     </TableContainer>
                     <TablePagination
-                        rowsPerPageOptions={[20, 50, 100,200,500]}
+                        rowsPerPageOptions={[20, 50, 100, 200, 500,1000]}
                         component="div"
                         count={almacen.length}
                         rowsPerPage={rowsPerPage}
@@ -369,7 +379,7 @@ const ListaAlmacen = () => {
                         onPageChange={handleChangePage}
                         // onChangePage={handleChangePage}
                         onRowsPerPageChange={handleChangeRowsPerPage}
-                        // onChangeRowsPerPage={handleChangeRowsPerPage}
+                    // onChangeRowsPerPage={handleChangeRowsPerPage}
                     />
                 </Paper>
             </Container>
@@ -384,7 +394,34 @@ const ListaAlmacen = () => {
                     <form onSubmit={editSubMaterial}>
                         <Grid container spacing={3}>
                             <Grid item xs={12} sm={6}>
+                                {changeData.typeRegister === 'salida' ? (
+                                    <TextField
+                                        style={{ display: 'block' }}
+                                        name='numVale'
+                                        label='Numero de Vale'
+                                        variant='outlined'
+                                        size='small'
+                                        fullWidth
+                                        className={classes.spacingBot}
+                                        defaultValue={changeData.numVale}
+                                        onChange={handleChange}
+                                    />
+
+                                ) : (
+                                    <TextField
+                                        style={{ display: 'block' }}
+                                        name='numeroIngreso'
+                                        label='Numero de Ingreso'
+                                        variant='outlined'
+                                        size='small'
+                                        fullWidth
+                                        className={classes.spacingBot}
+                                        defaultValue={changeData.numeroIngreso}
+                                        onChange={handleChange}
+                                    />
+                                )}
                                 <TextField
+                                    disabled
                                     name='nameMaterial'
                                     label='Nombre de Material'
                                     variant='outlined'
@@ -395,6 +432,7 @@ const ListaAlmacen = () => {
                                     onChange={handleChange}
                                 />
                                 <TextField
+                                    disabled
                                     name='nameSubMaterial'
                                     label='Nombre de Sub-Material'
                                     variant='outlined'

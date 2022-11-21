@@ -9,6 +9,7 @@ import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import PrintIcon from '@material-ui/icons/Print';
 import SaveIcon from '@material-ui/icons/Save';
 import { useLocation, useHistory } from 'react-router-dom';
+import { ErrorAlertsSalidas, SuccessAlertsSalidas } from '../../Atoms/Alerts/Alerts';
 
 const ipcRenderer = window.require('electron').ipcRenderer
 
@@ -18,8 +19,8 @@ const KardexValorado = (props) => {
     const location = useLocation()
     // console.log(location)
     const history = useHistory()
-    // console.log(history)
     var aux = history.location.pathname
+    // console.log(aux)
     aux = aux.split("/")
     // console.log(aux)
     const [kardex, setKardex] = useState([])
@@ -30,7 +31,7 @@ const KardexValorado = (props) => {
         typeRegister: 'salida',
         cantidadS: '',
         precioS: '',
-        precioUnitario: '',
+        // precioUnitario: '',
         procedenciaDestino: '',
         registerDate: '',
         numVale: '',
@@ -44,7 +45,7 @@ const KardexValorado = (props) => {
         typeRegister: 'salida',
         cantidadF: '',
         precio: '',
-        precioUnitario: '',
+        // precioUnitario: '',
         procedenciaDestino: '',
         unidadMedida: '',
         registerDate: '',
@@ -95,7 +96,7 @@ const KardexValorado = (props) => {
         doc.addImage(`${sello}`, 0.5, 0.3, 1.5, 0.7)
         doc.text(`Tajeta de Existencia Kardex valorado`, pageWidth / 2, 1, 'center')
         doc.setFontSize(13)
-        doc.text(`N°: ....`, 10, 1.2)
+        doc.text(`N°: ${aux[4]}`, 10, 1.2)
         doc.text(`Aticulo: ${aux[5]}`, 3, 1.4)
         doc.text(`Sector: INGENIO CACHITAMBO`, 3, 1.6)
         doc.text(`Unidad :  ${aux[6]}`, 9, 1.4)
@@ -129,14 +130,14 @@ const KardexValorado = (props) => {
             ],
             body: kardex.map((d) => ([
                 { content: d.registerDate },
-                { content: d.numeroIngreso ? d.numeroIngreso : '', styles: { halign: 'center' } },
+                { content: d.notaRemision ? d.notaRemision : '', styles: { halign: 'center' } },
                 { content: d.procedenciaDestino ? d.procedenciaDestino : '' },
-                { content: d.cantidadF ? d.cantidadF : '', styles: { halign: 'right' } },
-                { content: d.precio ? d.precio : '', styles: { halign: 'right' } },
+                { content: d.cantidadE ? d.cantidadE : '', styles: { halign: 'right' } },
+                { content: d.precioE ? d.precioE : '', styles: { halign: 'right' } },
                 { content: d.cantidadS ? d.cantidadS : '', styles: { halign: 'right' } },
                 { content: d.precioS ? d.precioS : '', styles: { halign: 'right' } },
-                { content: d.totalCantidad ? d.totalCantidad : '', styles: { halign: 'right' } },
-                { content: d.totalValor ? d.totalValor : '', styles: { halign: 'right' } },
+                { content: d.cantidadTotal ? d.cantidadTotal : '', styles: { halign: 'right' } },
+                { content: d.precioTotal ? d.precioTotal : '', styles: { halign: 'right' } },
                 { content: d.precioUnitario ? d.precioUnitario : '', styles: { halign: 'right' } },
             ])),
             styles: { fontSize: 10, font: 'courier', fontStyle: 'bold' },
@@ -176,13 +177,19 @@ const KardexValorado = (props) => {
     const postSalidas = async (e) => {
         e.preventDefault()
         if (kardex.length > 0) {
+            const num=kardex.length
+            const precioU=parseFloat(kardex[num-1].precioTotal)
+            const cantidadU=parseFloat(kardex[num-1].cantidadTotal)
+            if(precioU<changeData.precioS ||cantidadU<changeData.cantidadS ){
+                return openCloseAlertError()
+            }
             var date = changeData.registerDate.split("-")
             var fecha = date[2] + '-' + date[1] + '-' + date[0]
             const data = {
                 typeRegister: 'salida',
                 cantidadS: changeData.cantidadS,
                 precioS: changeData.precioS,
-                precioUnitario: changeData.precioUnitario,
+                // precioUnitario: changeData.precioUnitario,
                 procedenciaDestino: changeData.procedenciaDestino,
                 registerDate: fecha,
                 numVale: changeData.numVale,
@@ -198,12 +205,12 @@ const KardexValorado = (props) => {
                     // console.log(JSON.parse(resp))
                     closeModalSalidaMaterial()
                     getKardex()
+                    openCloseAlertSuccess()
                     setChangeData(removeChangeData)
-
                 })
                 .catch(err => console.log(err))
 
-        }else{
+        } else {
             closeModalSalidaMaterial()
             setChangeData(removeChangeData)
             alert('No se puede registrar salidas por que no se cuenta con ningun ingreso')
@@ -234,22 +241,30 @@ const KardexValorado = (props) => {
 
     // }
     //----------------------------HANDLE CHANGE-----------------------------------
+    const [openAlertSuccess, setOpenAlertSuccess] = useState(false)
+    const [openAlertError, setOpenAlertError] = useState(false)
     const handleChage = (e) => {
         setChangeData({
             ...changeData,
             [e.target.name]: e.target.value
         })
     }
-    console.log(kardex)
+    //----------------------------------------------------
+    const openCloseAlertSuccess = () => {
+        setOpenAlertSuccess(!openAlertSuccess)
+    }
+    const openCloseAlertError = () => {
+        setOpenAlertError(!openAlertError)
+    }
+    // console.log(kardex)
     return (
         <>
             <Container maxWidth='md' style={{ paddingTop: '2rem', marginBottom: '1rem' }}>
                 <Paper component={Box} p={1}>
                     <Typography variant='h5' align='center'>Tarjeta de Existencia Kardex Valorado</Typography>
                     <Grid container >
-                        <Grid item xs={12} sm={6}>
-                            <Typography>N°: ... </Typography>
-                            {/* <Typography>Articulo: {aux[5]}</Typography> */}
+                        {/* <Grid item xs={12} sm={6}>
+                            <Typography>N°: {aux[4]} </Typography>
                             <Typography>Articulo: {aux[5]}</Typography>
                             <Typography>Sector: INGENIO CACHITAMBO</Typography>
                         </Grid>
@@ -257,6 +272,16 @@ const KardexValorado = (props) => {
                             <Typography>Almacen de: CACHITAMBO</Typography>
                             <Typography>Saldo: {aux[6]}</Typography>
                             <Typography>Unidad Medida: {aux[7]}</Typography>
+                        </Grid> */}
+                        <Grid item xs={12} sm={6}>
+                            <Typography>N°: {location.data.codMaterial} </Typography>
+                            <Typography>Articulo: {location.data.nameSubMaterial}</Typography>
+                            <Typography>Sector: INGENIO CACHITAMBO</Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <Typography>Almacen de: CACHITAMBO</Typography>
+                            <Typography>Saldo: {location.data.saldoInicial}</Typography>
+                            <Typography>Unidad Medida: {location.data.unidadMedida}</Typography>
                         </Grid>
                     </Grid>
                 </Paper>
@@ -353,16 +378,16 @@ const KardexValorado = (props) => {
                                             <TableCell align='right'>{k.totalCantidad}</TableCell>
                                             <TableCell align='right'>{k.totalValor}</TableCell>
                                             <TableCell align='right'>{k.precioUnitario}</TableCell> */}
-                                            <TableCell>{k.registerDate}</TableCell>
-                                            <TableCell align='center'>{k.notaRemision}</TableCell>
-                                            <TableCell>{k.procedenciaDestino}</TableCell>
-                                            <TableCell align='right'>{k.cantidadE}</TableCell>
-                                            <TableCell align='right'>{k.precioE}</TableCell>
-                                            <TableCell align='right'>{k.cantidadS}</TableCell>
-                                            <TableCell align='right'>{k.precioS}</TableCell>
-                                            <TableCell align='right'>{k.cantidadTotal}</TableCell>
-                                            <TableCell align='right'>{k.precioTotal}</TableCell>
-                                            <TableCell align='right'>{k.precioUnitario}</TableCell>
+                                            <TableCell className={classes.tableCellBody}>{k.registerDate}</TableCell>
+                                            <TableCell align='center' className={classes.tableCellBody}>{k.notaRemision}</TableCell>
+                                            <TableCell className={classes.tableCellBody}>{k.procedenciaDestino}</TableCell>
+                                            <TableCell align='right' className={classes.tableCellBody}>{k.cantidadE}</TableCell>
+                                            <TableCell align='right' className={classes.tableCellBody}>{k.precioE}</TableCell>
+                                            <TableCell align='right' className={classes.tableCellBody}>{k.cantidadS}</TableCell>
+                                            <TableCell align='right' className={classes.tableCellBody}>{k.precioS}</TableCell>
+                                            <TableCell align='right' className={classes.tableCellBody}>{k.cantidadTotal}</TableCell>
+                                            <TableCell align='right' className={classes.tableCellBody}>{k.precioTotal}</TableCell>
+                                            <TableCell align='right' className={classes.tableCellBody}>{k.precioUnitario}</TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
@@ -440,7 +465,7 @@ const KardexValorado = (props) => {
                                     onChange={handleChage}
                                     required
                                 />
-                                <TextField
+                                {/* <TextField
                                     name='precioUnitario'
                                     label='Precio Unitario'
                                     variant='outlined'
@@ -452,7 +477,7 @@ const KardexValorado = (props) => {
                                     value={changeData.precioUnitario}
                                     onChange={handleChage}
                                     required
-                                />
+                                /> */}
                                 <TextField
                                     name='precioS'
                                     label='Precio Total'
@@ -481,6 +506,9 @@ const KardexValorado = (props) => {
                     </form>
                 </Paper>
             </Dialog>
+            {/* -------------------------ALERTS------------------------ */}
+            <SuccessAlertsSalidas open={openAlertSuccess} setOpen={openCloseAlertSuccess} />
+            <ErrorAlertsSalidas open={openAlertError} setOpen={openCloseAlertError} />
         </>
     )
 }
@@ -503,6 +531,9 @@ const useStyles = makeStyles((theme) => ({
     },
     spacingTextField: {
         marginBottom: 10
+    },
+    tableCellBody: {
+        // fontSize: 'small',
     }
 }))
 export default KardexValorado

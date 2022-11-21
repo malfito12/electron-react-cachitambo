@@ -160,7 +160,7 @@ const TarjetaExistencia = (props) => {
         <>
             <Container maxWidth='md' style={{ marginBottom: '1rem', paddingTop: '2rem' }}>
                 <Paper component={Box} p={1}>
-                    <Typography variant='h5' align='center'>TARJETA DE EXISTENCIA {aux[5]}</Typography>
+                    <Typography variant='h5' align='center'>TARJETA DE EXISTENCIA</Typography>
                     <Grid container spacing={3} >
                         <Grid item xs={12} sm={6}>
                             <Typography>Kardex N°: {aux[4]}</Typography>

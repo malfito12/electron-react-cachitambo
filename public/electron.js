@@ -3,12 +3,16 @@ const path = require('path')
 const isDev = require('electron-is-dev')
 const { v4: uuidv4 } = require('uuid');
 const momet = require('moment')
+// const {roundTo}= require('round-to');
+// var round=require('lodash')
+
+// import {roundTo, roundToUp, roundToDown} from 'round-to';
 // const nativeImage=require('electron').nativeImage
 // require('../src/database')
 // const Product= require('../src/models/Products')
 
 
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
 mongoose.connect('mongodb://localhost/cachitambodb', {
   // mongoose.connect('mongodb://localhost/electrondb', {
@@ -331,7 +335,7 @@ ipcMain.handle('post-subMaterial', async (e, args) => {
         unidadMedida: result.unidadMedida,
         image: result.image
       }
-    } else if (cont >= 9) {
+    } else if (cont >= 9 && cont <= 99) {
       var aux2 = (cont + 1).toString()
       aux2 = aux[0] + "-" + "0" + aux2
       data = {
@@ -371,7 +375,50 @@ ipcMain.handle('get-submaterial', async (e, args) => {
   }
 
 })
-
+//---------------GET SUB-MATERIAL DATA INICIAL Y FINAL---------------------------------
+ipcMain.handle('get-data-sub-material', async (e, args) => {
+  const params = args
+  var array = []
+  try {
+    const result = await SUBMATERIAL.find({ codMaterial: params }).sort({ codSubMaterial: 1 })
+    for (var i = 0; i < result.length; i++) {
+      const primero = await KARDEX.find({ codSubMaterial: result[i].codSubMaterial }).sort({ $natural: 1 }).limit(1);
+      const ultimo = await KARDEX.find({ codSubMaterial: result[i].codSubMaterial }).sort({ $natural: -1 }).limit(1);
+      // console.log(primero)
+      // console.log(ultimo)
+      if (primero.length > 0 && ultimo.length > 0) {
+        array.push({
+          codMaterial: result[i].codMaterial,
+          codSubMaterial: primero[0].codSubMaterial,
+          nameMaterial: primero[0].nameMaterial,
+          nameSubMaterial: primero[0].nameSubMaterial,
+          unidadMedida: primero[0].unidadMedida,
+          saldoInicial: primero[0].cantidadE,
+          saldoActual: ultimo[0].cantidadTotal,
+          precioTotal: ultimo[0].precioTotal,
+          precioUnitario: ultimo[0].precioUnitario,
+          image: result[i].image
+        })
+      } else {
+        array.push({
+          codMaterial: result[i].codMaterial,
+          codSubMaterial: result[i].codSubMaterial,
+          nameSubMaterial: result[i].nameSubMaterial,
+          unidadMedida: result[i].unidadMedida,
+          saldoInicial: '0',
+          saldoActual: '0',
+          precioTotal: '0',
+          precioUnitario: '0',
+          image: result[i].image
+        })
+      }
+    }
+    // console.log(array)
+    return JSON.stringify(array)
+  } catch (error) {
+    console.log(error)
+  }
+})
 //------------EDIT SUB MATERIALES---------------------
 ipcMain.handle("edit-submaterial", async (e, args) => {
   const result = args
@@ -405,6 +452,15 @@ ipcMain.handle("delete-submaterial", async (e, args) => {
   }
 })
 
+//---------------GET UNIDAD DE MEDIDA-----------------------------
+ipcMain.handle('get-unidad-medida', async (e, args) => {
+  try {
+    const result = await UNIDADMEDIDA.find({})
+    return JSON.stringify(result.rows)
+  } catch (error) {
+    console.log(error)
+  }
+})
 //---------------POST UNIDAD DE MEDIDA-----------------------------
 ipcMain.handle('post-unidadMedida', async (e, args) => {
   try {
@@ -437,15 +493,20 @@ ipcMain.handle('post-entradas', async (e, args) => {
   try {
     for (var i = 0; i < aux; i++) {
       const array = []
+      var precioUnitarioReal = 0
       const ultimo = await KARDEX.find({ codSubMaterial: result[i].codSubMaterial }).sort({ $natural: -1 }).limit(1)
         .then(async resp => {
           // console.log(resp[0])
           if (resp.length > 0) {
             if (result[i].typeRegister === 'entrada') {
-              // console.log('entra 1')
+              console.log('entra 1')
               const precioTotal = parseFloat(resp[0].precioTotal) + parseFloat(result[i].precio)
+              var precioTotalReal = (Math.round(precioTotal * 100) / 100).toFixed(2);
               const cantidadTotal = parseFloat(resp[0].cantidadTotal) + parseFloat(result[i].cantidadF)
-              const precioUnitario = precioTotal / cantidadTotal
+              // error de redondeo 156.60/6   
+              const precioUnitario = precioTotalReal / cantidadTotal
+              precioUnitarioReal = (Math.round(precioUnitario * 100) / 100).toFixed(2);
+              // console.log(precioUnitarioReal)
               array.push({
                 idAlmacen: result[i].idAlmacen,
                 typeRegister: result[i].typeRegister,
@@ -461,17 +522,21 @@ ipcMain.handle('post-entradas', async (e, args) => {
                 unidadMedida: result[i].unidadMedida,
                 deDonde: result[i].deDonde,
                 numFactura: result[i].numFactura,
-                precioTotal: precioTotal.toFixed(2),
+                precioTotal: precioTotalReal,
                 cantidadTotal: cantidadTotal,
-                precioUnitario: precioUnitario.toFixed(2)
+                precioUnitario: precioUnitarioReal
+                // precioUnitario: result[i].precioUnitario
               })
+              // console.log(array)
               const kardex = new KARDEX(array[0])
               await kardex.save()
             } else {
               // console.log('entra 2')
               const precioTotal = parseFloat(resp[0].precioTotal) - parseFloat(result[i].precio)
+              var precioTotalReal = (Math.round(precioTotal * 100) / 100).toFixed(2);
               const cantidadTotal = parseFloat(resp[0].cantidadTotal) - parseFloat(result[i].cantidadF)
               const precioUnitario = parseFloat(resp[0].precioUnitario)
+              precioUnitarioReal = (Math.round(precioUnitario * 100) / 100).toFixed(2);
               array.push({
                 idAlmacen: result[i].idAlmacen,
                 typeRegister: result[i].typeRegister,
@@ -485,17 +550,21 @@ ipcMain.handle('post-entradas', async (e, args) => {
                 cantidadE: result[i].cantidadF,
                 precioE: result[i].precio,
                 unidadMedida: result[i].unidadMedida,
-                precioTotal: precioTotal.toFixed(2),
+                precioTotal: precioTotalReal,
                 cantidadTotal: cantidadTotal,
-                precioUnitario: precioUnitario
+                precioUnitario: precioUnitarioReal
               })
               const kardex = new KARDEX(array[0])
               await kardex.save()
             }
           } else {
-            // console.log('entra 0')
-            const precioUnitario = result[i].precio / result[i].cantidadF
+            // console.log('entra 3')
+            const precioUnitario = parseFloat(result[i].precio) / parseFloat(result[i].cantidadF)
+            precioUnitarioReal = (Math.round(precioUnitario * 100) / 100).toFixed(2);
+            // console.log(roundedNum)
+            // console.log(precioUnitario.toFixed(2))
             const precioTotal = parseFloat(result[i].precio)
+            var precioTotalReal = (Math.round(precioTotal * 100) / 100).toFixed(2);
             array.push({
               idAlmacen: result[i].idAlmacen,
               typeRegister: result[i].typeRegister,
@@ -511,16 +580,17 @@ ipcMain.handle('post-entradas', async (e, args) => {
               unidadMedida: result[i].unidadMedida,
               deDonde: result[i].deDonde,
               numFactura: result[i].numFactura,
-              precioTotal: precioTotal.toFixed(2),
+              precioTotal: precioTotalReal,
               cantidadTotal: result[i].cantidadF,
-              precioUnitario: precioUnitario.toFixed(2)
+              // precioUnitario: precioUnitario.toFixed(2)
+              precioUnitario: precioUnitarioReal
             })
             const kardex = new KARDEX(array[0])
             await kardex.save()
           }
         })
-
-      const entradaSalida = new ENTRADASSALIDAS(result[i])
+      var data2 = { ...result[i], precioUnitario: precioUnitarioReal }
+      const entradaSalida = new ENTRADASSALIDAS(data2)
       entradaSalida.save()
     }
     // for (var i = 0; i < array.length; i++) {
@@ -537,14 +607,20 @@ ipcMain.handle(`post-salidas`, async (e, args) => {
   const result = args
   // console.log(result)
   try {
+    var newPrecioUnitario = 0
     const ultimo = await KARDEX.find({ codSubMaterial: result.codSubMaterial }).sort({ $natural: -1 }).limit(1)
       .then(async resp => {
         if (resp.length > 0) {
           const precioTotal = parseFloat(resp[0].precioTotal) - parseFloat(result.precioS)
+          var precioTotalReal = (Math.round(precioTotal * 100) / 100).toFixed(2);
           var cantidadTotal = parseFloat(resp[0].cantidadTotal) - parseFloat(result.cantidadS)
-          var precioUnitario = parseFloat(resp[0].precioUnitario)
+          // var precioUnitario = parseFloat(resp[0].precioUnitario)
+          var precioUnitario = precioTotalReal / cantidadTotal
+          var precioUnitarioReal = (Math.round(precioUnitario * 100) / 100).toFixed(2);
+          newPrecioUnitario = precioUnitarioReal
           if (cantidadTotal === 0) {
-            precioUnitario = 0
+            precioUnitarioReal = 0
+            newPrecioUnitario = 0
           }
           const data = {
             idAlmacen: result.idAlmacen,
@@ -558,18 +634,19 @@ ipcMain.handle(`post-salidas`, async (e, args) => {
             procedenciaDestino: result.procedenciaDestino,
             cantidadS: result.cantidadS,
             precioS: result.precioS,
-            precioTotal: precioTotal.toFixed(2),
+            precioTotal: precioTotalReal,
             cantidadTotal: cantidadTotal,
-            precioUnitario: precioUnitario.toFixed(2),
+            precioUnitario: precioUnitarioReal,
             unidadMedida: result.unidadMedida,
           }
           const kardex = new KARDEX(data)
           await kardex.save()
         }
       })
-    const salidaMaterial = new ENTRADASSALIDAS(result)
-    await salidaMaterial.save()
-    return JSON.stringify('salida de material registrada')
+      const nuevo = { ...result, precioUnitario: newPrecioUnitario }
+      const salidaMaterial = new ENTRADASSALIDAS(nuevo)
+      await salidaMaterial.save()
+      return JSON.stringify('salida de material registrada')
   } catch (error) {
     console.log(error)
   }
@@ -588,6 +665,7 @@ ipcMain.handle(`get-tarjetaExistencia`, async (e, args) => {
     if (getData[i].typeRegister === 'entrada') {
       const n = parseFloat(getData[i].cantidadF)
       sum = sum + n
+      var sumReal = (Math.round(sum * 100) / 100).toFixed(2);
       array.push({
         typeRegister: getData[i].typeRegister,
         codMaterial: getData[i].codMaterial,
@@ -604,11 +682,12 @@ ipcMain.handle(`get-tarjetaExistencia`, async (e, args) => {
         numFactura: getData[i].numFactura,
         numeroIngreso: getData[i].numeroIngreso,
         deDonde: getData[i].deDonde,
-        saldoExistencia: sum.toFixed(2)
+        saldoExistencia: sumReal
       })
     } else if (getData[i].typeRegister === 'salida') {
       const m = parseFloat(getData[i].cantidadS)
       rest = sum - m;
+      var restReal = (Math.round(rest * 100) / 100).toFixed(2);
       array.push({
         typeRegister: getData[i].typeRegister,
         codMaterial: getData[i].codMaterial,
@@ -626,7 +705,7 @@ ipcMain.handle(`get-tarjetaExistencia`, async (e, args) => {
         // numFactura:getData[i].numFactura,
         // deDonde:getData[i].deDonde,
         numVale: getData[i].numVale,
-        saldoExistencia: rest.toFixed(2)
+        saldoExistencia: restReal
       })
       sum = rest
     }
@@ -877,7 +956,7 @@ ipcMain.handle('delete-entrada-salida', async (e, args) => {
   // const idAlmacen=args.idAlmacen
   try {
     await KARDEX.deleteOne({ idAlmacen: args })
-    await ENTRADASSALIDAS.deleteOne({ idAlmacen: args  })
+    await ENTRADASSALIDAS.deleteOne({ idAlmacen: args })
     return JSON.stringify('Item eliminado')
   } catch (error) {
     console.log(error)
@@ -904,12 +983,23 @@ ipcMain.handle("edit-entradas-salidas", async (e, args) => {
   const id = args._id
   const idAlmacen = args.idAlmacen
   const typeRegister = args.typeRegister
-  // console.log(id)
   const fecha = args.registerDate
   const change = fecha.split('-')
   var newFecha = change[2] + '-' + change[1] + '-' + change[0]
+  // const search= await KARDEX.find({_id:id})
+  // const data=await KARDEX.find({$and:[{nameSubMaterial:search[0].nameSubMaterial},{registerDate:{$gte:search[0].registerDate}}]})
+  // //CANTIDAD
+  // const cantidadOffi=args.cantidad
+  //PERCIO-TOTAL
+  // const precioTotalOffi=args.precio+data[0].precio
+
+  //PRECIO-UNITARIO
+  // const precioUnitarioOffi=parseFloat(args.precio)/parseFloat(args.cantidad)
   if (typeRegister === 'entrada') {
+    // const restaPrecio= parseFloat(data[0].precio)-parseFloat(data[0].precioTotal)
+
     await ENTRADASSALIDAS.findOneAndUpdate({ _id: id }, {
+      numeroIngreso: args.numeroIngreso,
       cantidad: args.cantidad,
       nameMaterial: args.nameMaterial,
       nameSubMaterial: args.nameSubMaterial,
@@ -920,10 +1010,11 @@ ipcMain.handle("edit-entradas-salidas", async (e, args) => {
       unidadMedida: args.unidadMedida,
     })
     await KARDEX.updateOne({ idAlmacen: idAlmacen }, {
-      cantidad: args.cantidad,
+      notaRemision: args.numeroIngreso,
+      cantidadE: args.cantidad,
       nameMaterial: args.nameMaterial,
       nameSubMaterial: args.nameSubMaterial,
-      precio: args.precio,
+      precioE: args.precio,
       precioUnitario: args.precioUnitario,
       procedenciaDestino: args.procedenciaDestino,
       registerDate: newFecha,
@@ -931,6 +1022,7 @@ ipcMain.handle("edit-entradas-salidas", async (e, args) => {
     })
   } else {
     await ENTRADASSALIDAS.findOneAndUpdate({ _id: id }, {
+      numVale: args.numVale,
       cantidadS: args.cantidad,
       nameMaterial: args.nameMaterial,
       nameSubMaterial: args.nameSubMaterial,
@@ -941,6 +1033,7 @@ ipcMain.handle("edit-entradas-salidas", async (e, args) => {
       unidadMedida: args.unidadMedida,
     })
     await KARDEX.updateOne({ idAlmacen: idAlmacen }, {
+      notaRemision: args.numVale,
       cantidadS: args.cantidad,
       nameMaterial: args.nameMaterial,
       nameSubMaterial: args.nameSubMaterial,
@@ -1229,6 +1322,43 @@ ipcMain.handle('id-almacen', async (e, args) => {
       await ENTRADASSALIDAS.updateOne({ _id: almacen[i]._id }, { idAlmacen: uuidv4() })
     }
     return JSON.stringify('id almacen actualizado')
+  } catch (error) {
+    console.log(error)
+  }
+})
+
+//-----------PERNOS-----------------------------------
+ipcMain.handle('pernos', async (e, args) => {
+  try {
+    const pernos = await SUBMATERIAL.find({ codMaterial: '16-00X' })
+    for (var i = 0; i < pernos.length; i++) {
+      const result = await ENTRADASSALIDAS.find({ codSubMaterial: pernos[i].codSubMaterial })
+      for (var j = 0; j < result.length; j++) {
+        await ENTRADASSALIDAS.updateOne({ _id: result[j]._id }, { nameSubMaterial: pernos[i].nameSubMaterial })
+      }
+    }
+    return JSON.stringify('pernos actualizados')
+  } catch (error) {
+    console.log(error)
+  }
+})
+
+
+//--------------------PRECION UNITARIO-------------------
+ipcMain.handle('precio-unitario', async (a, atgs) => {
+  try {
+    const result = await KARDEX.find({})
+    const result2 = await ENTRADASSALIDAS.find({})
+    const cont = result.length
+    for (var i = 0; i < cont; i++) {
+      for (var j = 0; j < result2.length; j++) {
+        if (result[i].idAlmacen == result2[j].idAlmacen) {
+          await ENTRADASSALIDAS.updateOne({ idAlmacen: result2[j].idAlmacen }, { precioUnitario: result[i].precioUnitario })
+
+        }
+      }
+    }
+    return JSON.stringify('perico unitario actualizado')
   } catch (error) {
     console.log(error)
   }

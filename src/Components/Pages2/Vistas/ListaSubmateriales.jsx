@@ -10,6 +10,7 @@ import ImageIcon from '@material-ui/icons/Image';
 import SearchIcon from '@material-ui/icons/Search';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import DeleteIcon from '@material-ui/icons/Delete';
+import FilterNoneIcon from '@material-ui/icons/FilterNone';
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import sello from '../../../images/sello.png'
@@ -60,9 +61,10 @@ const ListaSubmateriales = (props) => {
     })
 
     useEffect(() => {
-        getSubMaterial()
-        getSubMaterialTotal()
-        getUnidadMedida()
+        // getSubMaterial()
+        // getSubMaterialTotal()
+        // getUnidadMedida()
+        getDataSubMaterial()
     }, [])
 
     //---------------GET SUB-MATERIALES------------------------
@@ -83,6 +85,21 @@ const ListaSubmateriales = (props) => {
         } catch (error) {
             console.log(error)
         }
+    }
+    //------------------GET SUB-MATERIALES TOTALES PRUEBA 2-----------------------------
+    const [subMaterialData,setSubMaterialData]=useState([])
+    const getDataSubMaterial=async()=>{
+        setProgress('flex')
+        await ipcRenderer.invoke('get-data-sub-material',url[2])
+        .then(resp=>{
+            if (JSON.parse(resp.length) === 0) {
+                setExist('flex')
+            }
+            setProgress('none')
+            // console.log(JSON.parse(resp))
+            setSubMaterialData(JSON.parse(resp))
+        })
+        .catch(err=>console.log(err))
     }
     //-------------------EDIT SUB MATERIAL -----------------------
     const openModalImage = (e) => {
@@ -174,7 +191,7 @@ const ListaSubmateriales = (props) => {
         const saldoInicial = e.saldoInicial
         const unidadMedida = e.unidadMedida
         history.push({
-            pathname: '/kardexValorado/' + codMaterial + '/' + nameMaterial + '/' + codSubMaterial + '/' + nameSubMaterial + "/" + saldoInicial + "/" + unidadMedida,
+            pathname: '/kardexValorado/' + codMaterial + '/' + nameMaterial + '/' + codSubMaterial + '/' + nameSubMaterial + "/" + saldoInicial + "/" + unidadMedida+'/',
             data: {
                 codMaterial: codMaterial,
                 nameMaterial: nameMaterial,
@@ -186,7 +203,7 @@ const ListaSubmateriales = (props) => {
         })
 
     }
-    //---------------------------------------------------
+    
 
     for (var i = 0; i < subMaterial.length; i++) {
         dos = { ...subMaterialTotal[i], ...subMaterial[i] }
@@ -240,7 +257,7 @@ const ListaSubmateriales = (props) => {
                 { content: 'Precio Total', styles: { halign: 'center' } },
                 { content: 'Precio Unitario', styles: { halign: 'center' } },
             ]],
-            body: array.map((d, index) => ([
+            body: subMaterialData.map((d, index) => ([
                 { content: index + 1 },
                 { content: d.codSubMaterial, styles: { halign: 'center' } },
                 { content: d.nameSubMaterial },
@@ -304,7 +321,7 @@ const ListaSubmateriales = (props) => {
                 <Grid container direction='row' justifyContent='space-between' alignItems='center' style={{ marginBottom: '0.5rem' }}>
                     <RegisterSubMaterial dos={url} uno={getSubMaterial} />
                     <div>
-                        {array &&
+                        {subMaterialData &&
                             <TextField
                                 style={{ background: 'white', borderRadius: 5, marginRight: '1rem' }}
                                 variant='outlined'
@@ -368,8 +385,8 @@ const ListaSubmateriales = (props) => {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {array.length > 0 ? (
-                                    array.filter(buscarSubMaterial(buscador)).map(s => (
+                                {subMaterialData.length > 0 ? (
+                                    subMaterialData.filter(buscarSubMaterial(buscador)).map(s => (
                                         <TableRow key={s._id} className={classes.tableRow}>
                                             <TableCell>{s.codSubMaterial}</TableCell>
                                             <TableCell>{s.nameSubMaterial}</TableCell>
@@ -387,7 +404,7 @@ const ListaSubmateriales = (props) => {
                                                     </Tooltip>
                                                     <Tooltip title='tarjeta'>
                                                         <IconButton size='small' onClick={() => irTarjeta(s)}>
-                                                            <InfoIcon />
+                                                            <FilterNoneIcon />
                                                         </IconButton>
                                                     </Tooltip>
                                                     <Tooltip title='kardex' >

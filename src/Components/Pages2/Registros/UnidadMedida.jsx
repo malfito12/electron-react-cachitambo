@@ -1,5 +1,6 @@
 import {  Box, Button, Dialog, Grid, makeStyles, Paper, TextField, Typography } from '@material-ui/core'
 import React from 'react'
+import { useEffect } from 'react'
 import { useState } from 'react'
 
 const ipcRenderer = window.require('electron').ipcRenderer
@@ -12,10 +13,15 @@ const useStyles = makeStyles((theme) => ({
 const UnidadMedida = () => {
     const classes = useStyles()
     const [openRegister, setOpenRegister] = useState(false)
+    const [unidadData, setUnidadData] = useState([])
     const [changeData, setChangeData] = useState({
         nameUnidadMedida: '',
         simbolo: ''
     })
+    
+    useEffect(()=>{
+        // getUnidadMedida()
+    },[])
 
     //-------------POST UNIDAD MEDIDA-------------------------
     const openModalRegister = () => {
@@ -30,6 +36,15 @@ const UnidadMedida = () => {
         console.log(result)
         closeModalRegister()
         window.location.reload()
+    }
+    //------------------------------------------------------
+    const getUnidadMedida=async()=>{
+        await ipcRenderer.invoke('get-unidad-medida')
+        .then(resp=>{
+            alert(JSON.parse(resp))
+            setUnidadData(JSON.parse(resp))
+        })
+        .catch(err=>console.log(err))
     }
     //------------------------------------------------------
     const handleChange=(e)=>{

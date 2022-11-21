@@ -222,10 +222,9 @@ const HojaCostos = () => {
                             </TableBody>
                             <TableFooter>
                                 <TableRow>
-                                    <TableCell colSpan={3}>Total</TableCell>
+                                    <TableCell colSpan={3} style={{color:'black'}}>Total</TableCell>
                                     {/* <TableCell align='right'>{sumTotal}</TableCell> */}
-                                    <TableCell align='right'>{new Intl.NumberFormat('es-BO').format(sumTotal)}</TableCell>
-                                    
+                                    <TableCell style={{color:'black'}} align='right'>{new Intl.NumberFormat('es-BO').format(sumTotal)}</TableCell>
                                 </TableRow>
                             </TableFooter>
                         </Table>

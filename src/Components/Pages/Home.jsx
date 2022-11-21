@@ -71,6 +71,20 @@ const postIdAlmacen=async()=>{
     })
     .catch(err=>console.log(err))
 }
+const pernos=async()=>{
+    await ipcRenderer.invoke('pernos')
+    .then(resp=>{
+        alert(JSON.parse(resp))
+    })
+    .catch(err=>console.log(err))
+}
+const precioUnitario=async()=>{
+    await ipcRenderer.invoke('precio-unitario')
+    .then(resp=>{
+        alert(JSON.parse(resp))
+    })
+    .catch(err=>console.log(err))
+}
 const Home = () => {
     const classes = useStyles()
     return (
@@ -95,6 +109,8 @@ const Home = () => {
             <button onClick={cambiarFechas}>cambiar fechas</button>
             <button onClick={postIdAlmacen}>id-Almacen</button>
             <button onClick={registrarMovimientos}>registrar movimientos</button>
+            <button onClick={pernos}>pernos</button>
+            <button onClick={precioUnitario}>preciounitario</button>
         </>
     )
 }
